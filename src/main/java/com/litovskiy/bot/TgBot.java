@@ -15,12 +15,22 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 
 @Setter
 public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     private static final String TOKEN = "1116496780:AAH8HZ8kDNoSQW3LNXKM8ladh434hCJfEls";
     private TelegramClient telegramClient;
+
+    private Map<Long,Double> size = new HashMap<>();
+    private LocalDateTime time = LocalDateTime.now();
 
     @SneakyThrows
     public static void start() {
@@ -46,15 +56,34 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
     @Override
     public void consume(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
-            if (update.getMessage().getText().equals("/hello")) {
-                //String message_text = update.getMessage().getText();
+            if (update.getMessage().getText().equals("/grow")) {
+                String message_text = update.getMessage().getText();
                 long chat_id = update.getMessage().getChatId();
 
-                SendMessage message = SendMessage
-                    .builder()
-                    .chatId(chat_id)
-                    .text("бубубу бебебе")
-                    .build();
+                Timestamp timestamp = new Timestamp(update.getMessage().getDate());
+
+                Random random = new Random();
+                double pisya = size.getOrDefault(chat_id, 2.0) * random.nextDouble(0.9, 1.5);
+                double scale = Math.pow(10, 2);
+                size.put(chat_id, Math.ceil(pisya * scale)/scale);
+
+
+                SendMessage message;
+                if (ChronoUnit.MINUTES.between(time, LocalDateTime.now()) <= 1) {
+                    message = SendMessage
+                        .builder()
+                        .chatId(chat_id)
+                        .text("Попробуйте снова в " + time.plusMinutes(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+                        .build();
+                } else {
+                    message = SendMessage
+                        .builder()
+                        .chatId(chat_id)
+                        .text("Ваша пися теперь " + size.get(chat_id) + " см")
+                        .build();
+                    time = LocalDateTime.now();
+                }
+
 
                 try {
                     telegramClient.execute(message);
@@ -64,5 +93,4 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
             }
         }
     }
-
 }
