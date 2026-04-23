@@ -17,6 +17,7 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -30,7 +31,8 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
     private TelegramClient telegramClient;
 
     private Map<Long,Double> size = new HashMap<>();
-    private LocalDateTime time = LocalDateTime.now();
+    private Map<Long,LocalDateTime> time = new HashMap<>();
+    private Random random = new Random();
 
     @SneakyThrows
     public static void start() {
@@ -57,23 +59,19 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
     public void consume(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             if (update.getMessage().getText().equals("/grow")) {
-                String message_text = update.getMessage().getText();
                 long chat_id = update.getMessage().getChatId();
 
-                Timestamp timestamp = new Timestamp(update.getMessage().getDate());
-
-                Random random = new Random();
-                double pisya = size.getOrDefault(chat_id, 2.0) * random.nextDouble(0.9, 1.5);
-                double scale = Math.pow(10, 2);
-                size.put(chat_id, Math.ceil(pisya * scale)/scale);
-
+                LocalDateTime localTime = time.getOrDefault(chat_id, LocalDateTime.of(2000, 1, 1, 1, 1, 1));
 
                 SendMessage message;
-                if (ChronoUnit.MINUTES.between(time, LocalDateTime.now()) <= 1) {
+                if (ChronoUnit.MINUTES.between(localTime, LocalDateTime.now()) <= 1) {
+                    double pisya = size.getOrDefault(chat_id, 2.0) * random.nextDouble(0.9, 1.5);
+                    double scale = Math.pow(10, 2);
+                    size.put(chat_id, Math.ceil(pisya * scale) / scale);
                     message = SendMessage
                         .builder()
                         .chatId(chat_id)
-                        .text("Попробуйте снова в " + time.plusMinutes(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+                        .text("Попробуйте снова в " + localTime.plusMinutes(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
                         .build();
                 } else {
                     message = SendMessage
@@ -81,7 +79,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
                         .chatId(chat_id)
                         .text("Ваша пися теперь " + size.get(chat_id) + " см")
                         .build();
-                    time = LocalDateTime.now();
+                    time.put(chat_id, LocalDateTime.now());
                 }
 
 
