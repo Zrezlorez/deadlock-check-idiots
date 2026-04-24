@@ -9,25 +9,17 @@ import java.util.function.Function;
 public abstract class BaseDao {
 
     protected <T> T execute(Function<Session, T> action) {
-        Session session = HibernateUtil.getSessionFactory().openSession();
         Transaction tx = null;
-
-        try {
+        try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             tx = session.beginTransaction();
-
             T result = action.apply(session);
-
             tx.commit();
             return result;
-
         } catch (Exception e) {
             if (tx != null) {
                 tx.rollback();
             }
             throw e;
-
-        } finally {
-            session.close();
         }
     }
 

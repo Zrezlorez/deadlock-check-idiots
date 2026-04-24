@@ -1,25 +1,24 @@
-import com.litovskiy.dao.GenericDao;
+import com.litovskiy.dao.PlayerDao;
+import com.litovskiy.entity.GrowthStyle;
+import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import com.litovskiy.service.ActivityService;
+import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.DickService;
+import com.litovskiy.service.GameConfigService;
+import com.litovskiy.service.GameSetting;
+import com.litovskiy.service.PlayerAccountService;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.time.temporal.ChronoUnit;
+import java.util.Random;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,127 +26,90 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 public class DickServiceTest {
 
-    private static final Pattern SUCCESS_PATTERN = Pattern.compile(
-        "Ваш член вырос на (\\d+\\.\\d+) (см|м|км|к км)\\. Текущий размер: (\\d+\\.\\d+) (см|м|км|к км)"
-    );
-
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
+    @Mock
+    private PlayerDao playerDao;
 
     @Mock
-    private GenericDao<Player> playerDao;
+    private PlayerAccountService playerAccountService;
 
-    @InjectMocks
-    private DickService dickService;
+    @Mock
+    private ActivityService activityService;
 
-    @Test
-    @DisplayName("Проверка успешного роста")
-    public void testSuccessfulGrow() {
-        when(playerDao.find(1)).thenReturn(new Player(1L, 1.0));
+    @Mock
+    private ConversationStyleService conversationStyleService;
 
-        String result = dickService.grow(1);
-        Matcher matcher = SUCCESS_PATTERN.matcher(result);
+    @Mock
+    private GameConfigService gameConfigService;
 
-        System.out.println(result);
-        Assertions.assertTrue(matcher.find());
-        Assertions.assertEquals("см", matcher.group(2));
-        Assertions.assertEquals("см", matcher.group(4));
-
-        double range = Double.parseDouble(matcher.group(1));
-        double newSize = Double.parseDouble(matcher.group(3));
-        Assertions.assertTrue(range < 1.0 && range > 0.0);
-        Assertions.assertTrue(newSize > 1.0 && newSize < 2.0);
-    }
+    @Mock
+    private Random random;
 
     @Test
-    @DisplayName("Есть кд роста")
-    public void testCooldownGrow() {
-        AtomicReference<Player> storage = new AtomicReference<>(new Player(1L, 1.0));
-        mockSinglePlayerStorage(storage);
+    @DisplayName("Рост учитывает бонус активности и стиль беседы")
+    void growUsesActivityBonusAndConversationStyle() {
+        Player player = new Player(77L, 10.0);
+        player.setDiscordUserId(22L);
 
-        String firstResult = dickService.grow(1);
-        Assertions.assertTrue(isSuccessfulGrow(firstResult));
+        when(playerAccountService.resolveOrCreate(Platform.DISCORD, 22L)).thenReturn(player);
+        when(activityService.getGrowthBonusMultiplier(Platform.DISCORD, 22L, 123L)).thenReturn(1.15);
+        when(conversationStyleService.getStyle(Platform.DISCORD, 123L)).thenReturn(GrowthStyle.EMOTIONAL_INTELLIGENCE);
+        when(gameConfigService.getDouble(GameSetting.GROWTH_MEAN)).thenReturn(1.05);
+        when(gameConfigService.getDouble(GameSetting.GROWTH_MIN)).thenReturn(1.02);
+        when(gameConfigService.getDouble(GameSetting.GROWTH_MAX)).thenReturn(1.1);
+        when(gameConfigService.getDouble(GameSetting.SLOW_SCALE)).thenReturn(100_000_000.0);
+        when(random.nextGaussian()).thenReturn(0.0);
 
-        LocalDateTime savedGrowTime = storage.get().getLastGrowTime();
-        Assertions.assertNotEquals(LocalDateTime.MIN, savedGrowTime);
+        DickService dickService = new DickService(
+            playerDao,
+            playerAccountService,
+            activityService,
+            conversationStyleService,
+            gameConfigService,
+            random
+        );
 
-        String secondResult = dickService.grow(1);
-        Assertions.assertFalse(isSuccessfulGrow(secondResult));
-        Assertions.assertNotEquals(firstResult, secondResult);
-        Assertions.assertTrue(secondResult.contains(savedGrowTime.plusSeconds(1).format(TIME_FORMATTER)));
+        String result = dickService.grow(Platform.DISCORD, 22L, 123L);
 
-        verify(playerDao, times(1)).save(any(Player.class));
-    }
-
-    @Test
-    @DisplayName("Разный рост у двух игроков")
-    public void testPairGrow() {
-        when(playerDao.find(1)).thenReturn(new Player(1L, 1.0));
-        when(playerDao.find(2)).thenReturn(new Player(2L, 2.0));
-
-        String result1 = dickService.grow(1);
-        String result2 = dickService.grow(2);
-        Matcher matcher1 = SUCCESS_PATTERN.matcher(result1);
-        Matcher matcher2 = SUCCESS_PATTERN.matcher(result2);
-
-        Assertions.assertTrue(matcher1.find());
-        Assertions.assertTrue(matcher2.find());
-        Assertions.assertNotEquals(Double.parseDouble(matcher1.group(3)), Double.parseDouble(matcher2.group(3)));
+        Assertions.assertTrue(result.contains("эмоциональный интеллект"));
+        Assertions.assertTrue(player.getSize() > 10.5);
+        verify(activityService).getGrowthBonusMultiplier(Platform.DISCORD, 22L, 123L);
+        verify(conversationStyleService).getStyle(Platform.DISCORD, 123L);
+        verify(playerDao).save(player);
     }
 
     @Test
-    @DisplayName("Разное кд у двух игроков")
-    public void testPairCooldownSuccessfulGrow() {
-        Map<Long, Player> storage = new HashMap<>();
-        storage.put(1L, new Player(1L, 1.0));
-        storage.put(2L, new Player(2L, 2.0));
-        mockPlayersStorage(storage);
+    @DisplayName("Кулдаун общий для привязанных профилей")
+    void growRespectsSharedCooldown() {
+        Player player = new Player(77L, 10.0);
+        player.setTelegramChatId(11L);
+        player.setDiscordUserId(22L);
 
-        String firstPlayerFirstGrow = dickService.grow(1);
-        Assertions.assertTrue(isSuccessfulGrow(firstPlayerFirstGrow));
+        when(playerAccountService.resolveOrCreate(eq(Platform.TELEGRAM), eq(11L))).thenReturn(player);
+        when(playerAccountService.resolveOrCreate(eq(Platform.DISCORD), eq(22L))).thenReturn(player);
+        when(activityService.getGrowthBonusMultiplier(Platform.TELEGRAM, 11L, -100L)).thenReturn(1.0);
+        when(conversationStyleService.getStyle(Platform.TELEGRAM, -100L)).thenReturn(GrowthStyle.DICK);
+        when(gameConfigService.getInt(GameSetting.COOLDOWN_RANGE)).thenReturn(1);
+        when(gameConfigService.getChronoUnit(GameSetting.COOLDOWN_UNIT)).thenReturn(ChronoUnit.SECONDS);
+        when(gameConfigService.getDouble(GameSetting.GROWTH_MEAN)).thenReturn(1.05);
+        when(gameConfigService.getDouble(GameSetting.GROWTH_MIN)).thenReturn(1.02);
+        when(gameConfigService.getDouble(GameSetting.GROWTH_MAX)).thenReturn(1.1);
+        when(gameConfigService.getDouble(GameSetting.SLOW_SCALE)).thenReturn(100_000_000.0);
+        when(random.nextGaussian()).thenReturn(0.0);
 
-        LocalDateTime firstPlayerSavedGrowTime = storage.get(1L).getLastGrowTime();
-        Assertions.assertNotEquals(LocalDateTime.MIN, firstPlayerSavedGrowTime);
+        DickService dickService = new DickService(
+            playerDao,
+            playerAccountService,
+            activityService,
+            conversationStyleService,
+            gameConfigService,
+            random
+        );
 
-        String firstPlayerSecondGrow = dickService.grow(1);
-        Assertions.assertFalse(isSuccessfulGrow(firstPlayerSecondGrow));
-        Assertions.assertTrue(firstPlayerSecondGrow.contains(firstPlayerSavedGrowTime.plusSeconds(1).format(TIME_FORMATTER)));
+        String firstGrow = dickService.grow(Platform.TELEGRAM, 11L, -100L);
+        String secondGrow = dickService.grow(Platform.DISCORD, 22L, 200L);
 
-        String secondPlayerGrow = dickService.grow(2);
-        Assertions.assertTrue(isSuccessfulGrow(secondPlayerGrow));
-        Assertions.assertNotEquals(LocalDateTime.MIN, storage.get(2L).getLastGrowTime());
-
-        verify(playerDao, times(2)).save(any(Player.class));
-    }
-
-    private void mockSinglePlayerStorage(AtomicReference<Player> storage) {
-        when(playerDao.find(1)).thenAnswer(invocation -> copyPlayer(storage.get()));
-        doAnswer(invocation -> {
-            Player savedPlayer = invocation.getArgument(0);
-            storage.set(copyPlayer(savedPlayer));
-            return null;
-        }).when(playerDao).save(any(Player.class));
-    }
-
-    private void mockPlayersStorage(Map<Long, Player> storage) {
-        when(playerDao.find(anyLong())).thenAnswer(invocation -> copyPlayer(storage.get(invocation.getArgument(0))));
-        doAnswer(invocation -> {
-            Player savedPlayer = invocation.getArgument(0);
-            storage.put(savedPlayer.getChatId(), copyPlayer(savedPlayer));
-            return null;
-        }).when(playerDao).save(any(Player.class));
-    }
-
-    private boolean isSuccessfulGrow(String result) {
-        return SUCCESS_PATTERN.matcher(result).find();
-    }
-
-    private Player copyPlayer(Player source) {
-        if (source == null) {
-            return null;
-        }
-
-        Player copy = new Player(source.getChatId(), source.getSize());
-        copy.setLastGrowTime(source.getLastGrowTime());
-        return copy;
+        Assertions.assertTrue(firstGrow.contains("Ваш член вырос на"));
+        Assertions.assertTrue(secondGrow.contains("следующая попытка будет в"));
+        verify(playerDao, times(1)).save(player);
     }
 }

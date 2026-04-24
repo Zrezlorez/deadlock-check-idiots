@@ -6,7 +6,10 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Properties;
 
-public class ProxyManager {
+public final class ProxyManager {
+
+    private ProxyManager() {
+    }
 
     public static OkHttpClient getOkHttpClient() {
         Properties props = PropsManager.getProps();
@@ -31,6 +34,4 @@ public class ProxyManager {
         InetSocketAddress address = new InetSocketAddress(host, port);
         return new Proxy(Proxy.Type.HTTP, address);
     }
-
-
 }
