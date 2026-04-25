@@ -40,6 +40,9 @@ public class Player {
     @Column(name = "discord_user_id")
     private Long discordUserId;
 
+    @Column(name = "telegram_display_name")
+    private String telegramDisplayName;
+
     public Player(Long chatId, double size) {
         this.chatId = chatId;
         this.size = size;

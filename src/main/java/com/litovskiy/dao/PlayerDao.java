@@ -82,13 +82,6 @@ public class PlayerDao extends BaseDao {
         });
     }
 
-    public void delete(Player player) {
-        executeVoid(session -> {
-            Player attached = session.contains(player) ? player : session.merge(player);
-            session.remove(attached);
-        });
-    }
-
     private Player findByField(String fieldName, Object value) {
         return execute(session -> session.createQuery(
                 "from Player p where p." + fieldName + " = :value",
@@ -103,6 +96,7 @@ public class PlayerDao extends BaseDao {
         target.setLastGrowTime(source.getLastGrowTime());
         target.setTelegramChatId(source.getTelegramChatId());
         target.setDiscordUserId(source.getDiscordUserId());
+        target.setTelegramDisplayName(source.getTelegramDisplayName());
     }
 
     private void mergeActivityStats(org.hibernate.Session session, long sourcePlayerChatId, long targetPlayerChatId) {

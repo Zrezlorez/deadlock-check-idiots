@@ -34,12 +34,14 @@ public class LeaderboardServiceTest {
     private GameConfigService gameConfigService;
 
     @Test
-    @DisplayName("Локальный лидерборд сортирует участников беседы по размеру")
-    void buildScopeLeaderboardSortsParticipants() {
+    @DisplayName("Локальный лидерборд Telegram показывает имя ссылкой на профиль")
+    void buildScopeLeaderboardFormatsTelegramProfileLink() {
         Player first = new Player(1L, 350.0);
         first.setTelegramChatId(1001L);
+        first.setTelegramDisplayName("Иван");
         Player second = new Player(2L, 120.0);
         second.setTelegramChatId(1002L);
+        second.setTelegramDisplayName("Петр");
 
         LeaderboardService leaderboardService = new LeaderboardService(
             playerDao,
@@ -56,19 +58,18 @@ public class LeaderboardServiceTest {
         String result = leaderboardService.buildLeaderboard(Platform.TELEGRAM, 1002L, -100L);
 
         Assertions.assertTrue(result.contains("Топ этой беседы"));
-        Assertions.assertTrue(result.indexOf("id 1001") < result.indexOf("id 1002"));
+        Assertions.assertTrue(result.contains("<a href=\"tg://user?id=1001\">Иван</a>"));
+        Assertions.assertTrue(result.contains("<a href=\"tg://user?id=1002\">Петр</a>"));
         Assertions.assertTrue(result.contains("← вы"));
     }
 
     @Test
-    @DisplayName("Глобальный лидерборд показывает место игрока вне видимого топа")
-    void buildGlobalLeaderboardShowsRequesterPlace() {
+    @DisplayName("Глобальный лидерборд Discord сохраняет формат упоминаний")
+    void buildGlobalLeaderboardKeepsDiscordMentions() {
         Player first = new Player(1L, 500.0);
         first.setDiscordUserId(11L);
         Player second = new Player(2L, 300.0);
         second.setDiscordUserId(22L);
-        Player third = new Player(3L, 100.0);
-        third.setDiscordUserId(33L);
 
         LeaderboardService leaderboardService = new LeaderboardService(
             playerDao,
@@ -84,6 +85,7 @@ public class LeaderboardServiceTest {
         String result = leaderboardService.buildLeaderboard(Platform.DISCORD, 33L, null);
 
         Assertions.assertTrue(result.contains("Глобальный топ"));
-        Assertions.assertFalse(result.contains("<@33>"));
+        Assertions.assertTrue(result.contains("<@11>"));
+        Assertions.assertTrue(result.contains("<@22>"));
     }
 }

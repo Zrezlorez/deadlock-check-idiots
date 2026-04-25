@@ -9,6 +9,7 @@ import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.DickService;
 import com.litovskiy.service.LeaderboardService;
 import com.litovskiy.service.LinkService;
+import com.litovskiy.service.PlayerAccountService;
 import com.litovskiy.util.BotConfig;
 import com.litovskiy.util.HttpClientFactory;
 import lombok.SneakyThrows;
@@ -31,6 +32,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
     private final LeaderboardService leaderboardService;
     private final LinkService linkService;
     private final AdminCommandService adminCommandService;
+    private final PlayerAccountService playerAccountService;
 
     private TelegramClient telegramClient;
     private Long botUserId;
@@ -43,6 +45,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         this.leaderboardService = appServices.leaderboardService();
         this.linkService = appServices.linkService();
         this.adminCommandService = appServices.adminCommandService();
+        this.playerAccountService = appServices.playerAccountService();
     }
 
     @SneakyThrows
@@ -76,6 +79,13 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
             handleBotAdded(update);
         }
 
+        if (update.getMessage().getFrom() != null) {
+            playerAccountService.updateTelegramDisplayName(
+                update.getMessage().getFrom().getId(),
+                formatTelegramDisplayName(update.getMessage().getFrom())
+            );
+        }
+
         if (!update.getMessage().hasText()) {
             return;
         }
@@ -93,7 +103,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
             return;
         }
 
-        String response = buildResponse(command, commandParts, chatId, profileId);
+        BotReply response = buildResponse(command, commandParts, chatId, profileId);
         if (response == null) {
             return;
         }
@@ -101,17 +111,17 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         sendMessage(chatId, response);
     }
 
-    private String buildResponse(String command, String[] commandParts, long chatId, long profileId) {
+    private BotReply buildResponse(String command, String[] commandParts, long chatId, long profileId) {
         return switch (command) {
-            case "/grow" -> buildGrowResponse(chatId, profileId);
-            case "/top", "/leaderboard" -> buildLeaderboardResponse(chatId, profileId);
-            case "/link" -> buildLinkResponse(commandParts, profileId);
-            case "/style" -> buildStyleResponse(commandParts, chatId, profileId);
-            case "/admin" -> adminCommandService.handle(
+            case "/grow" -> new BotReply(buildGrowResponse(chatId, profileId), false);
+            case "/top", "/leaderboard" -> new BotReply(buildLeaderboardResponse(chatId, profileId), true);
+            case "/link" -> new BotReply(buildLinkResponse(commandParts, profileId), false);
+            case "/style" -> new BotReply(buildStyleResponse(commandParts, chatId, profileId), false);
+            case "/admin" -> new BotReply(adminCommandService.handle(
                 Platform.TELEGRAM,
                 profileId,
                 commandParts.length > 1 ? commandParts[1] : ""
-            );
+            ), false);
             default -> null;
         };
     }
@@ -144,14 +154,18 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         return conversationStyleService.updateTelegramStyle(chatId, profileId, commandParts[1]);
     }
 
-    private void sendMessage(long chatId, String response) {
-        SendMessage message = SendMessage.builder()
+    private void sendMessage(long chatId, BotReply reply) {
+        SendMessage.SendMessageBuilder builder = SendMessage.builder()
             .chatId(chatId)
-            .text(response)
-            .build();
+            .text(reply.text());
+
+        if (reply.html()) {
+            builder.parseMode("HTML");
+            builder.disableWebPagePreview(true);
+        }
 
         try {
-            telegramClient.execute(message);
+            telegramClient.execute(builder.build());
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
@@ -190,5 +204,29 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         }
 
         return null;
+    }
+
+    private String formatTelegramDisplayName(User user) {
+        StringBuilder builder = new StringBuilder();
+        user.getFirstName();
+        if (!user.getFirstName().isBlank()) {
+            builder.append(user.getFirstName().trim());
+        }
+        if (user.getLastName() != null && !user.getLastName().isBlank()) {
+            if (!builder.isEmpty()) {
+                builder.append(' ');
+            }
+            builder.append(user.getLastName().trim());
+        }
+        if (!builder.isEmpty()) {
+            return builder.toString();
+        }
+        if (user.getUserName() != null && !user.getUserName().isBlank()) {
+            return "@" + user.getUserName().trim();
+        }
+        return "Пользователь " + user.getId();
+    }
+
+    private record BotReply(String text, boolean html) {
     }
 }

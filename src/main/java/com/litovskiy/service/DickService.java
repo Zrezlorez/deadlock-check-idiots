@@ -5,12 +5,12 @@ import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Random;
+import static com.litovskiy.util.StringUtil.convertValue;
+import static com.litovskiy.util.StringUtil.round;
 
 public class DickService {
 
@@ -105,7 +105,7 @@ public class DickService {
         return switch (growthResult.outcome()) {
             case FAIL -> buildFailMessage(style, oldValue, growthResult.newValue(), diff);
             case CRIT -> String.format(
-                "Критический успех. Ваш %s вырос на %s. Текущий размер: %s",
+                "Джекпот! Ваш %s вырос на %s. Текущий размер: %s",
                 style.displayName(),
                 convertValue(diff),
                 convertValue(growthResult.newValue())
@@ -122,7 +122,7 @@ public class DickService {
     private String buildFailMessage(GrowthStyle style, double oldValue, double newValue, double diff) {
         if (Double.compare(oldValue, newValue) == 0) {
             return String.format(
-                "Неудача. Ваш %s не смог уменьшиться ниже стартового размера. Текущий размер: %s",
+                "Неудача, но не страшно. Ваш %s не смог уменьшиться ниже стартового размера. Текущий размер: %s",
                 style.displayName(),
                 convertValue(newValue)
             );
@@ -147,27 +147,6 @@ public class DickService {
         return 1 + (baseGrowth - 1) * slowdown * activityBonus;
     }
 
-    private String convertValue(double value) {
-        if (value > 100_000_000) {
-            return round(value / 100_000_000) + " к км";
-        }
-
-        if (value > 100_000) {
-            return round(value / 100_000) + " км";
-        }
-
-        if (value > 100) {
-            return round(value / 100) + " м";
-        }
-
-        return round(value) + " см";
-    }
-
-    private double round(double value) {
-        return BigDecimal.valueOf(value)
-            .setScale(2, RoundingMode.HALF_UP)
-            .doubleValue();
-    }
 
     private enum Outcome {
         NORMAL,

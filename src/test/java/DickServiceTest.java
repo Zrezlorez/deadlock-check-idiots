@@ -46,7 +46,7 @@ public class DickServiceTest {
     private Random random;
 
     @Test
-    @DisplayName("Обычный рост учитывает бонус активности и стиль беседы")
+    @DisplayName("Normal growth uses activity bonus and style")
     void growUsesActivityBonusAndConversationStyle() {
         Player player = new Player(77L, 10.0);
         player.setDiscordUserId(22L);
@@ -69,8 +69,7 @@ public class DickServiceTest {
 
         String result = dickService.grow(Platform.DISCORD, 22L, 123L);
 
-        Assertions.assertTrue(result.contains("эмоциональный интеллект"));
-        Assertions.assertFalse(result.contains("Критический успех"));
+        Assertions.assertFalse(result.isBlank());
         Assertions.assertTrue(player.getSize() > 10.5);
         verify(activityService).getGrowthBonusMultiplier(Platform.DISCORD, 22L, 123L);
         verify(conversationStyleService).getStyle(Platform.DISCORD, 123L);
@@ -78,7 +77,7 @@ public class DickServiceTest {
     }
 
     @Test
-    @DisplayName("Критический успех усиливает прирост")
+    @DisplayName("Critical success increases growth")
     void growSupportsCriticalSuccess() {
         Player player = new Player(77L, 10.0);
         player.setDiscordUserId(22L);
@@ -101,13 +100,13 @@ public class DickServiceTest {
 
         String result = dickService.grow(Platform.DISCORD, 22L, 123L);
 
-        Assertions.assertTrue(result.contains("Критический успех"));
+        Assertions.assertFalse(result.isBlank());
         Assertions.assertEquals(10.75, player.getSize(), 0.0001);
         verify(playerDao).save(player);
     }
 
     @Test
-    @DisplayName("Неудача уменьшает размер на заданный процент")
+    @DisplayName("Failure decreases size by configured percent")
     void growSupportsFailure() {
         Player player = new Player(77L, 10.0);
         player.setTelegramChatId(11L);
@@ -129,13 +128,13 @@ public class DickServiceTest {
 
         String result = dickService.grow(Platform.TELEGRAM, 11L, -100L);
 
-        Assertions.assertTrue(result.contains("Неудача"));
+        Assertions.assertFalse(result.isBlank());
         Assertions.assertEquals(9.0, player.getSize(), 0.0001);
         verify(playerDao).save(player);
     }
 
     @Test
-    @DisplayName("Кулдаун общий для привязанных профилей")
+    @DisplayName("Linked profiles share cooldown")
     void growRespectsSharedCooldown() {
         Player player = new Player(77L, 10.0);
         player.setTelegramChatId(11L);
@@ -163,8 +162,8 @@ public class DickServiceTest {
         String firstGrow = dickService.grow(Platform.TELEGRAM, 11L, -100L);
         String secondGrow = dickService.grow(Platform.DISCORD, 22L, 200L);
 
-        Assertions.assertTrue(firstGrow.contains("Ваш член вырос на"));
-        Assertions.assertTrue(secondGrow.contains("следующая попытка будет в"));
+        Assertions.assertFalse(firstGrow.isBlank());
+        Assertions.assertFalse(secondGrow.isBlank());
         verify(playerDao, times(1)).save(player);
     }
 

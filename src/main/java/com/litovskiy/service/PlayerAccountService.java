@@ -4,6 +4,8 @@ import com.litovskiy.dao.PlayerDao;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 
+import java.util.Objects;
+
 public class PlayerAccountService {
 
     private final PlayerDao playerDao;
@@ -31,5 +33,19 @@ public class PlayerAccountService {
         platform.setProfileId(newPlayer, profileId);
         playerDao.save(newPlayer);
         return newPlayer;
+    }
+
+    public void updateTelegramDisplayName(long profileId, String displayName) {
+        if (displayName == null || displayName.isBlank()) {
+            return;
+        }
+
+        Player player = resolveOrCreate(Platform.TELEGRAM, profileId);
+        if (Objects.equals(player.getTelegramDisplayName(), displayName)) {
+            return;
+        }
+
+        player.setTelegramDisplayName(displayName);
+        playerDao.save(player);
     }
 }
