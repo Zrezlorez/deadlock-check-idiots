@@ -91,7 +91,7 @@ public class AdminCommandService {
 
     private String handlePlayer(String[] parts) {
         if (parts.length < 4) {
-            return "Использование: admin player <show|set-size|add-size|reset-cooldown|set-last-grow> <platform> <profileId> [value]";
+            return "Использование: admin player <show|set-size|add-size|reset-cooldown|set-last-grow> <platform> <username|tag|id> [value]";
         }
 
         Platform targetPlatform = parsePlatform(parts[2]);
@@ -99,26 +99,36 @@ public class AdminCommandService {
             return "Неизвестная платформа. Используйте telegram или discord.";
         }
 
-        long profileId;
-        try {
-            profileId = Long.parseLong(parts[3]);
-        } catch (NumberFormatException e) {
-            return "profileId должен быть числом.";
-        }
-
-        Player player = playerDao.findByPlatform(targetPlatform, profileId);
+        String identifier = parts[3];
+        Player player = resolvePlayer(targetPlatform, identifier);
         if (player == null) {
             return "Игрок не найден.";
         }
 
         return switch (parts[1].toLowerCase()) {
-            case "show" -> formatPlayer(targetPlatform, profileId, player);
+            case "show" -> formatPlayer(targetPlatform, identifier, player);
             case "set-size" -> updatePlayerSize(player, parts, true);
             case "add-size" -> updatePlayerSize(player, parts, false);
             case "reset-cooldown" -> resetCooldown(player);
             case "set-last-grow" -> setLastGrow(player, parts);
             default -> "Неизвестная команда игрока.";
         };
+    }
+
+    private Player resolvePlayer(Platform platform, String identifier) {
+        Player player = switch (platform) {
+            case TELEGRAM -> playerDao.findByTelegramUsername(identifier);
+            case DISCORD -> playerDao.findByDiscordTag(identifier);
+        };
+        if (player != null) {
+            return player;
+        }
+
+        try {
+            return playerDao.findByPlatform(platform, Long.parseLong(identifier));
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private String updatePlayerSize(Player player, String[] parts, boolean replace) {
@@ -162,15 +172,17 @@ public class AdminCommandService {
         }
     }
 
-    private String formatPlayer(Platform platform, long profileId, Player player) {
+    private String formatPlayer(Platform platform, String identifier, Player player) {
         return "Игрок найден:\n"
             + "platform = " + platform.displayName() + "\n"
-            + "profileId = " + profileId + "\n"
+            + "identifier = " + identifier + "\n"
             + "playerChatId = " + player.getChatId() + "\n"
             + "size = " + player.getSize() + "\n"
             + "lastGrowTime = " + player.getLastGrowTime() + "\n"
             + "telegramChatId = " + player.getTelegramChatId() + "\n"
-            + "discordUserId = " + player.getDiscordUserId();
+            + "telegramUsername = " + player.getTelegramUsername() + "\n"
+            + "discordUserId = " + player.getDiscordUserId() + "\n"
+            + "discordTag = " + player.getDiscordTag();
     }
 
     private Platform parsePlatform(String rawValue) {
@@ -198,11 +210,11 @@ public class AdminCommandService {
             admin config
             admin set <key> <value>
             admin reset <key>
-            admin player show <platform> <profileId>
-            admin player set-size <platform> <profileId> <value>
-            admin player add-size <platform> <profileId> <value>
-            admin player reset-cooldown <platform> <profileId>
-            admin player set-last-grow <platform> <profileId> <yyyy-MM-ddTHH:mm:ss|none>
+            admin player show <platform> <username|tag|id>
+            admin player set-size <platform> <username|tag|id> <value>
+            admin player add-size <platform> <username|tag|id> <value>
+            admin player reset-cooldown <platform> <username|tag|id>
+            admin player set-last-grow <platform> <username|tag|id> <yyyy-MM-ddTHH:mm:ss|none>
             """.trim();
     }
 }

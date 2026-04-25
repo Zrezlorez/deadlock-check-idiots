@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Random;
+
 import static com.litovskiy.util.StringUtil.convertValue;
 import static com.litovskiy.util.StringUtil.round;
 
@@ -105,9 +106,8 @@ public class DickService {
 
     private GrowthResult buildFailResult(double oldValue) {
         double failPercent = gameConfigService.getDouble(GameSetting.FAIL_PERCENT);
-        double minValue = gameConfigService.getDouble(GameSetting.START_SIZE);
         double decreasedValue = round(oldValue * (1 - failPercent));
-        double newValue = Math.max(minValue, decreasedValue);
+        double newValue = Math.max(0.0, decreasedValue);
         return new GrowthResult(newValue, Outcome.FAIL);
     }
 
@@ -133,7 +133,7 @@ public class DickService {
     private String buildFailMessage(GrowthStyle style, double oldValue, double newValue, double diff) {
         if (Double.compare(oldValue, newValue) == 0) {
             return String.format(
-                "Неудача, но не страшно. Ваш %s не смог уменьшиться ниже стартового размера. Текущий размер: %s",
+                "Неудача, но не страшно. Ваш %s не смог уменьшиться ниже нуля. Текущий размер: %s",
                 style.displayName(),
                 convertValue(newValue)
             );
@@ -157,7 +157,6 @@ public class DickService {
         double slowdown = 1 / (1 + currentSize / slowScale);
         return 1 + (baseGrowth - 1) * slowdown * activityBonus;
     }
-
 
     private enum Outcome {
         NORMAL,

@@ -8,6 +8,7 @@ import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.DickService;
 import com.litovskiy.service.LeaderboardService;
 import com.litovskiy.service.LinkService;
+import com.litovskiy.service.PlayerAccountService;
 import com.litovskiy.util.BotConfig;
 import com.litovskiy.util.HttpClientFactory;
 import lombok.SneakyThrows;
@@ -32,6 +33,7 @@ public class DiscordBot extends ListenerAdapter {
     private final LeaderboardService leaderboardService;
     private final LinkService linkService;
     private final AdminCommandService adminCommandService;
+    private final PlayerAccountService playerAccountService;
 
     public DiscordBot(AppServices appServices) {
         this.activityService = appServices.activityService();
@@ -40,6 +42,7 @@ public class DiscordBot extends ListenerAdapter {
         this.leaderboardService = appServices.leaderboardService();
         this.linkService = appServices.linkService();
         this.adminCommandService = appServices.adminCommandService();
+        this.playerAccountService = appServices.playerAccountService();
     }
 
     @SneakyThrows
@@ -65,13 +68,14 @@ public class DiscordBot extends ListenerAdapter {
                 Commands.slash("style", "Посмотреть или изменить стиль роста на сервере")
                     .addOption(OptionType.STRING, "name", "Название стиля", false),
                 Commands.slash("admin", "Админ-команды")
-                    .addOption(OptionType.STRING, "command", "Например: config или player show discord 123", false)
+                    .addOption(OptionType.STRING, "command", "Например: config, player show telegram @name, player show discord user#1234", false)
             )
             .queue();
     }
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
+        playerAccountService.updateDiscordTag(event.getUser().getIdLong(), formatDiscordTag(event.getUser()));
         String response = buildSlashResponse(event);
         if (response != null) {
             event.reply(response).queue();
@@ -84,6 +88,7 @@ public class DiscordBot extends ListenerAdapter {
             return;
         }
 
+        playerAccountService.updateDiscordTag(event.getAuthor().getIdLong(), formatDiscordTag(event.getAuthor()));
         activityService.recordMessage(Platform.DISCORD, event.getAuthor().getIdLong(), event.getGuild().getIdLong());
     }
 
@@ -151,5 +156,13 @@ public class DiscordBot extends ListenerAdapter {
         }
 
         return conversationStyleService.updateDiscordStyle(scopeId, styleName);
+    }
+
+    private String formatDiscordTag(net.dv8tion.jda.api.entities.User user) {
+        String discriminator = user.getDiscriminator();
+        if (discriminator == null || discriminator.equals("0")) {
+            return user.getName();
+        }
+        return user.getName() + "#" + discriminator;
     }
 }

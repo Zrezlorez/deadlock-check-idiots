@@ -80,9 +80,10 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         }
 
         if (update.getMessage().getFrom() != null) {
-            playerAccountService.updateTelegramDisplayName(
+            playerAccountService.updateTelegramProfile(
                 update.getMessage().getFrom().getId(),
-                formatTelegramDisplayName(update.getMessage().getFrom())
+                formatTelegramDisplayName(update.getMessage().getFrom()),
+                update.getMessage().getFrom().getUserName()
             );
         }
 
@@ -218,8 +219,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     private String formatTelegramDisplayName(User user) {
         StringBuilder builder = new StringBuilder();
-        user.getFirstName();
-        if (!user.getFirstName().isBlank()) {
+        if (user.getFirstName() != null && !user.getFirstName().isBlank()) {
             builder.append(user.getFirstName().trim());
         }
         if (user.getLastName() != null && !user.getLastName().isBlank()) {

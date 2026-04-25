@@ -21,6 +21,14 @@ public class PlayerDao extends BaseDao {
         };
     }
 
+    public Player findByTelegramUsername(String username) {
+        return findByNormalizedField("telegramUsername", normalizeHandle(username));
+    }
+
+    public Player findByDiscordTag(String tag) {
+        return findByNormalizedField("discordTag", normalizeTag(tag));
+    }
+
     public Player findLegacy(long profileId) {
         return execute(session -> session.createQuery(
                 "from Player p where p.chatId = :profileId and p.telegramChatId is null and p.discordUserId is null",
@@ -91,12 +99,33 @@ public class PlayerDao extends BaseDao {
             .uniqueResult());
     }
 
+    private Player findByNormalizedField(String fieldName, String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return execute(session -> session.createQuery(
+                "from Player p where lower(p." + fieldName + ") = :value",
+                Player.class)
+            .setParameter("value", value.toLowerCase())
+            .setMaxResults(1)
+            .uniqueResult());
+    }
+
     private void copyState(Player source, Player target) {
         target.setSize(source.getSize());
         target.setLastGrowTime(source.getLastGrowTime());
         target.setTelegramChatId(source.getTelegramChatId());
         target.setDiscordUserId(source.getDiscordUserId());
-        target.setTelegramDisplayName(source.getTelegramDisplayName());
+        if (source.getTelegramDisplayName() != null) {
+            target.setTelegramDisplayName(source.getTelegramDisplayName());
+        }
+        if (source.getTelegramUsername() != null) {
+            target.setTelegramUsername(source.getTelegramUsername());
+        }
+        if (source.getDiscordTag() != null) {
+            target.setDiscordTag(source.getDiscordTag());
+        }
     }
 
     private void mergeActivityStats(org.hibernate.Session session, long sourcePlayerChatId, long targetPlayerChatId) {
@@ -155,5 +184,21 @@ public class PlayerDao extends BaseDao {
             }
             session.remove(sourceSession);
         }
+    }
+
+    private String normalizeHandle(String username) {
+        if (username == null) {
+            return null;
+        }
+
+        String trimmed = username.trim();
+        if (trimmed.startsWith("@")) {
+            trimmed = trimmed.substring(1);
+        }
+        return trimmed;
+    }
+
+    private String normalizeTag(String tag) {
+        return tag == null ? null : tag.trim();
     }
 }

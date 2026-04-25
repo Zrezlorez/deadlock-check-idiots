@@ -32,7 +32,7 @@ public class AdminCommandServiceTest {
     private PlayerDao playerDao;
 
     @Test
-    @DisplayName("admin config показывает текущие значения")
+    @DisplayName("admin config shows current values")
     void configCommandShowsSettings() {
         AdminCommandService service = new AdminCommandService(adminAccessService, gameConfigService, playerDao);
         Map<GameSetting, String> values = new LinkedHashMap<>();
@@ -49,18 +49,35 @@ public class AdminCommandServiceTest {
     }
 
     @Test
-    @DisplayName("admin player set-size меняет размер игрока")
-    void playerSetSizeUpdatesPlayer() {
+    @DisplayName("admin player set-size finds Telegram player by username")
+    void playerSetSizeUpdatesTelegramPlayerByUsername() {
         AdminCommandService service = new AdminCommandService(adminAccessService, gameConfigService, playerDao);
         Player player = new Player(10L, 5.0);
         player.setLastGrowTime(LocalDateTime.now());
+        player.setTelegramUsername("tester");
 
         when(adminAccessService.isAdmin(Platform.DISCORD, 2L)).thenReturn(true);
-        when(playerDao.findByPlatform(Platform.TELEGRAM, 100L)).thenReturn(player);
+        when(playerDao.findByTelegramUsername("@tester")).thenReturn(player);
 
-        String result = service.handle(Platform.DISCORD, 2L, "player set-size telegram 100 42.5");
+        String result = service.handle(Platform.DISCORD, 2L, "player set-size telegram @tester 42.5");
 
         Assertions.assertTrue(result.contains("42.5"));
         verify(playerDao).save(player);
+    }
+
+    @Test
+    @DisplayName("admin player show finds Discord player by tag")
+    void playerShowFindsDiscordPlayerByTag() {
+        AdminCommandService service = new AdminCommandService(adminAccessService, gameConfigService, playerDao);
+        Player player = new Player(10L, 5.0);
+        player.setDiscordUserId(777L);
+        player.setDiscordTag("tester#1234");
+
+        when(adminAccessService.isAdmin(Platform.TELEGRAM, 1L)).thenReturn(true);
+        when(playerDao.findByDiscordTag("tester#1234")).thenReturn(player);
+
+        String result = service.handle(Platform.TELEGRAM, 1L, "player show discord tester#1234");
+
+        Assertions.assertTrue(result.contains("discordTag = tester#1234"));
     }
 }

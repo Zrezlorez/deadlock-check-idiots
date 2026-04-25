@@ -35,17 +35,55 @@ public class PlayerAccountService {
         return newPlayer;
     }
 
-    public void updateTelegramDisplayName(long profileId, String displayName) {
-        if (displayName == null || displayName.isBlank()) {
-            return;
-        }
-
+    public void updateTelegramProfile(long profileId, String displayName, String username) {
         Player player = resolveOrCreate(Platform.TELEGRAM, profileId);
-        if (Objects.equals(player.getTelegramDisplayName(), displayName)) {
+        boolean changed = false;
+
+        if (displayName != null && !displayName.isBlank() && !Objects.equals(player.getTelegramDisplayName(), displayName)) {
+            player.setTelegramDisplayName(displayName);
+            changed = true;
+        }
+
+        String normalizedUsername = normalizeTelegramUsername(username);
+        if (!Objects.equals(player.getTelegramUsername(), normalizedUsername)) {
+            player.setTelegramUsername(normalizedUsername);
+            changed = true;
+        }
+
+        if (changed) {
+            playerDao.save(player);
+        }
+    }
+
+    public void updateDiscordTag(long profileId, String discordTag) {
+        String normalizedDiscordTag = normalizeDiscordTag(discordTag);
+        if (normalizedDiscordTag == null) {
             return;
         }
 
-        player.setTelegramDisplayName(displayName);
+        Player player = resolveOrCreate(Platform.DISCORD, profileId);
+        if (Objects.equals(player.getDiscordTag(), normalizedDiscordTag)) {
+            return;
+        }
+
+        player.setDiscordTag(normalizedDiscordTag);
         playerDao.save(player);
+    }
+
+    private String normalizeTelegramUsername(String username) {
+        if (username == null || username.isBlank()) {
+            return null;
+        }
+
+        String normalized = username.trim();
+        return normalized.startsWith("@") ? normalized.substring(1) : normalized;
+    }
+
+    private String normalizeDiscordTag(String discordTag) {
+        if (discordTag == null || discordTag.isBlank()) {
+            return null;
+        }
+
+        return discordTag.trim();
     }
 }
