@@ -92,6 +92,8 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
         String text = update.getMessage().getText().trim();
         long chatId = update.getMessage().getChatId();
+        Integer messageThreadId = update.getMessage().getMessageThreadId();
+        Integer replyToMessageId = update.getMessage().getMessageId();
         long profileId = update.getMessage().getFrom().getId();
         if (chatId < 0 && !text.startsWith("/")) {
             activityService.recordMessage(Platform.TELEGRAM, profileId, chatId);
@@ -108,7 +110,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
             return;
         }
 
-        sendMessage(chatId, response);
+        sendMessage(chatId, messageThreadId, replyToMessageId, response);
     }
 
     private BotReply buildResponse(String command, String[] commandParts, long chatId, long profileId) {
@@ -154,10 +156,18 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         return conversationStyleService.updateTelegramStyle(chatId, profileId, commandParts[1]);
     }
 
-    private void sendMessage(long chatId, BotReply reply) {
-        SendMessage.SendMessageBuilder builder = SendMessage.builder()
+    private void sendMessage(long chatId, Integer messageThreadId, Integer replyToMessageId, BotReply reply) {
+        SendMessage.SendMessageBuilder<?, ?> builder = SendMessage.builder()
             .chatId(chatId)
             .text(reply.text());
+
+        if (messageThreadId != null) {
+            builder.messageThreadId(messageThreadId);
+        }
+
+        if (replyToMessageId != null) {
+            builder.replyToMessageId(replyToMessageId);
+        }
 
         if (reply.html()) {
             builder.parseMode("HTML");
