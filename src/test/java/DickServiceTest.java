@@ -19,6 +19,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Random;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -45,7 +46,7 @@ public class DickServiceTest {
     private Random random;
 
     @Test
-    @DisplayName("Рост учитывает бонус активности и стиль беседы")
+    @DisplayName("Обычный рост учитывает бонус активности и стиль беседы")
     void growUsesActivityBonusAndConversationStyle() {
         Player player = new Player(77L, 10.0);
         player.setDiscordUserId(22L);
@@ -53,10 +54,8 @@ public class DickServiceTest {
         when(playerAccountService.resolveOrCreate(Platform.DISCORD, 22L)).thenReturn(player);
         when(activityService.getGrowthBonusMultiplier(Platform.DISCORD, 22L, 123L)).thenReturn(1.15);
         when(conversationStyleService.getStyle(Platform.DISCORD, 123L)).thenReturn(GrowthStyle.EMOTIONAL_INTELLIGENCE);
-        when(gameConfigService.getDouble(GameSetting.GROWTH_MEAN)).thenReturn(1.05);
-        when(gameConfigService.getDouble(GameSetting.GROWTH_MIN)).thenReturn(1.02);
-        when(gameConfigService.getDouble(GameSetting.GROWTH_MAX)).thenReturn(1.1);
-        when(gameConfigService.getDouble(GameSetting.SLOW_SCALE)).thenReturn(100_000_000.0);
+        mockCommonGrowthSettings();
+        when(random.nextDouble()).thenReturn(0.5);
         when(random.nextGaussian()).thenReturn(0.0);
 
         DickService dickService = new DickService(
@@ -71,9 +70,67 @@ public class DickServiceTest {
         String result = dickService.grow(Platform.DISCORD, 22L, 123L);
 
         Assertions.assertTrue(result.contains("эмоциональный интеллект"));
+        Assertions.assertFalse(result.contains("Критический успех"));
         Assertions.assertTrue(player.getSize() > 10.5);
         verify(activityService).getGrowthBonusMultiplier(Platform.DISCORD, 22L, 123L);
         verify(conversationStyleService).getStyle(Platform.DISCORD, 123L);
+        verify(playerDao).save(player);
+    }
+
+    @Test
+    @DisplayName("Критический успех усиливает прирост")
+    void growSupportsCriticalSuccess() {
+        Player player = new Player(77L, 10.0);
+        player.setDiscordUserId(22L);
+
+        when(playerAccountService.resolveOrCreate(Platform.DISCORD, 22L)).thenReturn(player);
+        when(activityService.getGrowthBonusMultiplier(Platform.DISCORD, 22L, 123L)).thenReturn(1.0);
+        when(conversationStyleService.getStyle(Platform.DISCORD, 123L)).thenReturn(GrowthStyle.DICK);
+        mockCommonGrowthSettings();
+        when(random.nextDouble()).thenReturn(0.2);
+        when(random.nextGaussian()).thenReturn(0.0);
+
+        DickService dickService = new DickService(
+            playerDao,
+            playerAccountService,
+            activityService,
+            conversationStyleService,
+            gameConfigService,
+            random
+        );
+
+        String result = dickService.grow(Platform.DISCORD, 22L, 123L);
+
+        Assertions.assertTrue(result.contains("Критический успех"));
+        Assertions.assertEquals(10.75, player.getSize(), 0.0001);
+        verify(playerDao).save(player);
+    }
+
+    @Test
+    @DisplayName("Неудача уменьшает размер на заданный процент")
+    void growSupportsFailure() {
+        Player player = new Player(77L, 10.0);
+        player.setTelegramChatId(11L);
+
+        when(playerAccountService.resolveOrCreate(Platform.TELEGRAM, 11L)).thenReturn(player);
+        when(activityService.getGrowthBonusMultiplier(Platform.TELEGRAM, 11L, -100L)).thenReturn(1.0);
+        when(conversationStyleService.getStyle(Platform.TELEGRAM, -100L)).thenReturn(GrowthStyle.DICK);
+        mockCommonGrowthSettings();
+        when(random.nextDouble()).thenReturn(0.05);
+
+        DickService dickService = new DickService(
+            playerDao,
+            playerAccountService,
+            activityService,
+            conversationStyleService,
+            gameConfigService,
+            random
+        );
+
+        String result = dickService.grow(Platform.TELEGRAM, 11L, -100L);
+
+        Assertions.assertTrue(result.contains("Неудача"));
+        Assertions.assertEquals(9.0, player.getSize(), 0.0001);
         verify(playerDao).save(player);
     }
 
@@ -88,12 +145,10 @@ public class DickServiceTest {
         when(playerAccountService.resolveOrCreate(eq(Platform.DISCORD), eq(22L))).thenReturn(player);
         when(activityService.getGrowthBonusMultiplier(Platform.TELEGRAM, 11L, -100L)).thenReturn(1.0);
         when(conversationStyleService.getStyle(Platform.TELEGRAM, -100L)).thenReturn(GrowthStyle.DICK);
+        mockCommonGrowthSettings();
         when(gameConfigService.getInt(GameSetting.COOLDOWN_RANGE)).thenReturn(1);
         when(gameConfigService.getChronoUnit(GameSetting.COOLDOWN_UNIT)).thenReturn(ChronoUnit.SECONDS);
-        when(gameConfigService.getDouble(GameSetting.GROWTH_MEAN)).thenReturn(1.05);
-        when(gameConfigService.getDouble(GameSetting.GROWTH_MIN)).thenReturn(1.02);
-        when(gameConfigService.getDouble(GameSetting.GROWTH_MAX)).thenReturn(1.1);
-        when(gameConfigService.getDouble(GameSetting.SLOW_SCALE)).thenReturn(100_000_000.0);
+        when(random.nextDouble()).thenReturn(0.5);
         when(random.nextGaussian()).thenReturn(0.0);
 
         DickService dickService = new DickService(
@@ -111,5 +166,19 @@ public class DickServiceTest {
         Assertions.assertTrue(firstGrow.contains("Ваш член вырос на"));
         Assertions.assertTrue(secondGrow.contains("следующая попытка будет в"));
         verify(playerDao, times(1)).save(player);
+    }
+
+    private void mockCommonGrowthSettings() {
+        lenient().when(gameConfigService.getInt(GameSetting.COOLDOWN_RANGE)).thenReturn(1);
+        lenient().when(gameConfigService.getChronoUnit(GameSetting.COOLDOWN_UNIT)).thenReturn(ChronoUnit.HOURS);
+        lenient().when(gameConfigService.getDouble(GameSetting.GROWTH_MEAN)).thenReturn(1.05);
+        lenient().when(gameConfigService.getDouble(GameSetting.GROWTH_MIN)).thenReturn(1.02);
+        lenient().when(gameConfigService.getDouble(GameSetting.GROWTH_MAX)).thenReturn(1.1);
+        lenient().when(gameConfigService.getDouble(GameSetting.SLOW_SCALE)).thenReturn(100_000_000.0);
+        lenient().when(gameConfigService.getDouble(GameSetting.FAIL_CHANCE)).thenReturn(0.10);
+        lenient().when(gameConfigService.getDouble(GameSetting.FAIL_PERCENT)).thenReturn(0.10);
+        lenient().when(gameConfigService.getDouble(GameSetting.CRIT_CHANCE)).thenReturn(0.15);
+        lenient().when(gameConfigService.getDouble(GameSetting.CRIT_MULTIPLIER)).thenReturn(1.5);
+        lenient().when(gameConfigService.getDouble(GameSetting.START_SIZE)).thenReturn(1.0);
     }
 }

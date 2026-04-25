@@ -44,10 +44,6 @@ public class DickService {
         this.random = random;
     }
 
-    public String grow(Platform platform, long profileId) {
-        return grow(platform, profileId, null);
-    }
-
     public String grow(Platform platform, long profileId, Long scopeId) {
         LocalDateTime now = LocalDateTime.now();
         Player player = playerAccountService.resolveOrCreate(platform, profileId);
@@ -64,54 +60,121 @@ public class DickService {
 
         double oldValue = player.getSize();
         double activityBonus = activityService == null ? 1.0 : activityService.getGrowthBonusMultiplier(platform, profileId, scopeId);
-        double newValue = round(oldValue * getGrowth(oldValue, activityBonus));
-
-        player.setSize(newValue);
-        player.setLastGrowTime(now);
-        playerDao.save(player);
-
         GrowthStyle style = conversationStyleService == null
             ? GrowthStyle.DICK
             : conversationStyleService.getStyle(platform, scopeId);
 
+        GrowthResult growthResult = resolveGrowthResult(oldValue, activityBonus);
+        player.setSize(growthResult.newValue());
+        player.setLastGrowTime(now);
+        playerDao.save(player);
+
+        return buildResultMessage(style, oldValue, growthResult);
+    }
+
+    private GrowthResult resolveGrowthResult(double oldValue, double activityBonus) {
+        double outcomeRoll = random.nextDouble();
+        double failChance = gameConfigService.getDouble(GameSetting.FAIL_CHANCE);
+        double critChance = gameConfigService.getDouble(GameSetting.CRIT_CHANCE);
+
+        if (outcomeRoll < failChance) {
+            return buildFailResult(oldValue);
+        }
+
+        double growthMultiplier = getGrowth(oldValue, activityBonus);
+        boolean crit = outcomeRoll < failChance + critChance;
+        if (crit) {
+            double critMultiplier = gameConfigService.getDouble(GameSetting.CRIT_MULTIPLIER);
+            growthMultiplier = 1 + (growthMultiplier - 1) * critMultiplier;
+        }
+
+        double newValue = round(oldValue * growthMultiplier);
+        return new GrowthResult(newValue, crit ? Outcome.CRIT : Outcome.NORMAL);
+    }
+
+    private GrowthResult buildFailResult(double oldValue) {
+        double failPercent = gameConfigService.getDouble(GameSetting.FAIL_PERCENT);
+        double minValue = gameConfigService.getDouble(GameSetting.START_SIZE);
+        double decreasedValue = round(oldValue * (1 - failPercent));
+        double newValue = Math.max(minValue, decreasedValue);
+        return new GrowthResult(newValue, Outcome.FAIL);
+    }
+
+    private String buildResultMessage(GrowthStyle style, double oldValue, GrowthResult growthResult) {
+        double diff = round(Math.abs(growthResult.newValue() - oldValue));
+        return switch (growthResult.outcome()) {
+            case FAIL -> buildFailMessage(style, oldValue, growthResult.newValue(), diff);
+            case CRIT -> String.format(
+                "Критический успех. Ваш %s вырос на %s. Текущий размер: %s",
+                style.displayName(),
+                convertValue(diff),
+                convertValue(growthResult.newValue())
+            );
+            case NORMAL -> String.format(
+                "Ваш %s вырос на %s. Текущий размер: %s",
+                style.displayName(),
+                convertValue(diff),
+                convertValue(growthResult.newValue())
+            );
+        };
+    }
+
+    private String buildFailMessage(GrowthStyle style, double oldValue, double newValue, double diff) {
+        if (Double.compare(oldValue, newValue) == 0) {
+            return String.format(
+                "Неудача. Ваш %s не смог уменьшиться ниже стартового размера. Текущий размер: %s",
+                style.displayName(),
+                convertValue(newValue)
+            );
+        }
+
         return String.format(
-            "Ваш %s вырос на %s. Текущий размер: %s",
+            "Неудача. Ваш %s уменьшился на %s. Текущий размер: %s",
             style.displayName(),
-            convertValue(newValue - oldValue),
+            convertValue(diff),
             convertValue(newValue)
         );
     }
 
     private double getGrowth(double currentSize, double activityBonus) {
-        double dickGrowModifier = gameConfigService.getDouble(GameSetting.GROWTH_MEAN);
-        double minGrowModifier = gameConfigService.getDouble(GameSetting.GROWTH_MIN);
-        double maxGrowModifier = gameConfigService.getDouble(GameSetting.GROWTH_MAX);
+        double growthMean = gameConfigService.getDouble(GameSetting.GROWTH_MEAN);
+        double minGrowth = gameConfigService.getDouble(GameSetting.GROWTH_MIN);
+        double maxGrowth = gameConfigService.getDouble(GameSetting.GROWTH_MAX);
         double slowScale = gameConfigService.getDouble(GameSetting.SLOW_SCALE);
-        double baseGrowth = dickGrowModifier + random.nextGaussian() * 0.01;
-        baseGrowth = Math.max(minGrowModifier, Math.min(maxGrowModifier, baseGrowth));
+        double baseGrowth = growthMean + random.nextGaussian() * 0.01;
+        baseGrowth = Math.max(minGrowth, Math.min(maxGrowth, baseGrowth));
         double slowdown = 1 / (1 + currentSize / slowScale);
         return 1 + (baseGrowth - 1) * slowdown * activityBonus;
     }
 
-    private String convertValue(double sm) {
-        if (sm > 100_000_000) {
-            return round(sm / 100_000_000) + " к км";
+    private String convertValue(double value) {
+        if (value > 100_000_000) {
+            return round(value / 100_000_000) + " к км";
         }
 
-        if (sm > 100_000) {
-            return round(sm / 100_000) + " км";
+        if (value > 100_000) {
+            return round(value / 100_000) + " км";
         }
 
-        if (sm > 100) {
-            return round(sm / 100) + " м";
+        if (value > 100) {
+            return round(value / 100) + " м";
         }
 
-        return round(sm) + " см";
+        return round(value) + " см";
     }
 
     private double round(double value) {
         return BigDecimal.valueOf(value)
             .setScale(2, RoundingMode.HALF_UP)
             .doubleValue();
+    }
+
+    private enum Outcome {
+        NORMAL,
+        CRIT,
+        FAIL
+    }
+
+    private record GrowthResult(double newValue, Outcome outcome) {
     }
 }

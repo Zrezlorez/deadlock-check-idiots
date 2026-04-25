@@ -12,6 +12,10 @@ public enum GameSetting {
     GROWTH_MIN("growth_min", "1.02", "Минимальный коэффициент роста"),
     GROWTH_MAX("growth_max", "1.10", "Максимальный коэффициент роста"),
     SLOW_SCALE("slow_scale", "100000000.0", "Масштаб замедления роста"),
+    FAIL_CHANCE("fail_chance", "0.10", "Шанс неудачи при росте от 0 до 1"),
+    FAIL_PERCENT("fail_percent", "0.10", "Процент уменьшения при неудаче от 0 до 1"),
+    CRIT_CHANCE("crit_chance", "0.15", "Шанс критического успеха при росте от 0 до 1"),
+    CRIT_MULTIPLIER("crit_multiplier", "1.5", "Множитель прироста при критическом успехе"),
     ACTIVITY_LOOKBACK_DAYS("activity_lookback_days", "7", "Окно активности в днях"),
     ACTIVITY_MAX_GROWTH_BONUS("activity_max_growth_bonus", "0.15", "Максимальный бонус активности на платформу"),
     LEADERBOARD_LIMIT("leaderboard_limit", "10", "Количество строк в лидерборде"),
@@ -51,6 +55,20 @@ public enum GameSetting {
                 double value = Double.parseDouble(trimmed);
                 if (value <= 0) {
                     throw new IllegalArgumentException("Значение должно быть больше 0.");
+                }
+                yield Double.toString(value);
+            }
+            case FAIL_CHANCE, FAIL_PERCENT, CRIT_CHANCE -> {
+                double value = Double.parseDouble(trimmed);
+                if (value < 0 || value > 1) {
+                    throw new IllegalArgumentException("Значение должно быть в диапазоне от 0 до 1.");
+                }
+                yield Double.toString(value);
+            }
+            case CRIT_MULTIPLIER -> {
+                double value = Double.parseDouble(trimmed);
+                if (value < 1) {
+                    throw new IllegalArgumentException("Значение должно быть не меньше 1.");
                 }
                 yield Double.toString(value);
             }
