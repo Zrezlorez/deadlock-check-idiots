@@ -14,6 +14,7 @@ public enum GameSetting {
     SLOW_SCALE("slow_scale", "100000000.0", "Масштаб замедления роста"),
     ACTIVITY_LOOKBACK_DAYS("activity_lookback_days", "7", "Окно активности в днях"),
     ACTIVITY_MAX_GROWTH_BONUS("activity_max_growth_bonus", "0.15", "Максимальный бонус активности на платформу"),
+    LEADERBOARD_LIMIT("leaderboard_limit", "10", "Количество строк в лидерборде"),
     LINK_CODE_LENGTH("link_code_length", "6", "Длина кода линковки"),
     LINK_CODE_LIFETIME_MINUTES("link_code_lifetime_minutes", "10", "Срок жизни кода линковки в минутах");
 
@@ -53,7 +54,8 @@ public enum GameSetting {
                 }
                 yield Double.toString(value);
             }
-            case COOLDOWN_RANGE, ACTIVITY_LOOKBACK_DAYS, LINK_CODE_LENGTH, LINK_CODE_LIFETIME_MINUTES -> {
+            case COOLDOWN_RANGE, ACTIVITY_LOOKBACK_DAYS, LEADERBOARD_LIMIT, LINK_CODE_LENGTH,
+                LINK_CODE_LIFETIME_MINUTES -> {
                 int value = Integer.parseInt(trimmed);
                 if (value <= 0) {
                     throw new IllegalArgumentException("Значение должно быть больше 0.");

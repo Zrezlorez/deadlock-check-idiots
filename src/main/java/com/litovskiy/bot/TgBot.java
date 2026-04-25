@@ -7,6 +7,7 @@ import com.litovskiy.service.AdminCommandService;
 import com.litovskiy.service.AppServices;
 import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.DickService;
+import com.litovskiy.service.LeaderboardService;
 import com.litovskiy.service.LinkService;
 import com.litovskiy.util.BotConfig;
 import com.litovskiy.util.HttpClientFactory;
@@ -27,6 +28,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
     private final ActivityService activityService;
     private final ConversationStyleService conversationStyleService;
     private final DickService dickService;
+    private final LeaderboardService leaderboardService;
     private final LinkService linkService;
     private final AdminCommandService adminCommandService;
 
@@ -35,11 +37,12 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
     private String botUsername;
 
     public TgBot(AppServices appServices) {
-        this.activityService = appServices.getActivityService();
-        this.conversationStyleService = appServices.getConversationStyleService();
-        this.dickService = appServices.getDickService();
-        this.linkService = appServices.getLinkService();
-        this.adminCommandService = appServices.getAdminCommandService();
+        this.activityService = appServices.activityService();
+        this.conversationStyleService = appServices.conversationStyleService();
+        this.dickService = appServices.dickService();
+        this.leaderboardService = appServices.leaderboardService();
+        this.linkService = appServices.linkService();
+        this.adminCommandService = appServices.adminCommandService();
     }
 
     @SneakyThrows
@@ -101,6 +104,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
     private String buildResponse(String command, String[] commandParts, long chatId, long profileId) {
         return switch (command) {
             case "/grow" -> buildGrowResponse(chatId, profileId);
+            case "/top", "/leaderboard" -> buildLeaderboardResponse(chatId, profileId);
             case "/link" -> buildLinkResponse(commandParts, profileId);
             case "/style" -> buildStyleResponse(commandParts, chatId, profileId);
             case "/admin" -> adminCommandService.handle(
@@ -115,6 +119,11 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
     private String buildGrowResponse(long chatId, long profileId) {
         Long scopeId = chatId < 0 ? chatId : null;
         return dickService.grow(Platform.TELEGRAM, profileId, scopeId);
+    }
+
+    private String buildLeaderboardResponse(long chatId, long profileId) {
+        Long scopeId = chatId < 0 ? chatId : null;
+        return leaderboardService.buildLeaderboard(Platform.TELEGRAM, profileId, scopeId);
     }
 
     private String buildLinkResponse(String[] commandParts, long profileId) {

@@ -5,6 +5,7 @@ import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 import com.litovskiy.entity.VoiceSession;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class PlayerDao extends BaseDao {
@@ -32,6 +33,31 @@ public class PlayerDao extends BaseDao {
         executeVoid(session -> session.merge(player));
     }
 
+    public List<Player> findByChatIds(List<Long> chatIds) {
+        if (chatIds == null || chatIds.isEmpty()) {
+            return List.of();
+        }
+
+        return execute(session -> new ArrayList<>(session.createQuery(
+                "from Player p where p.chatId in :chatIds",
+                Player.class)
+            .setParameter("chatIds", chatIds)
+            .getResultList()));
+    }
+
+    public List<Player> findTopByPlatform(Platform platform, int limit) {
+        String fieldName = switch (platform) {
+            case TELEGRAM -> "telegramChatId";
+            case DISCORD -> "discordUserId";
+        };
+
+        return execute(session -> new ArrayList<>(session.createQuery(
+                "from Player p where p." + fieldName + " is not null order by p.size desc",
+                Player.class)
+            .setMaxResults(limit)
+            .getResultList()));
+    }
+
     public void mergeAndDeleteSource(Player targetPlayer, Player sourcePlayer) {
         executeVoid(session -> {
             Player attachedTarget = session.get(Player.class, targetPlayer.getChatId());
@@ -53,6 +79,13 @@ public class PlayerDao extends BaseDao {
             if (attachedSource != null && !attachedSource.getChatId().equals(attachedTarget.getChatId())) {
                 session.remove(attachedSource);
             }
+        });
+    }
+
+    public void delete(Player player) {
+        executeVoid(session -> {
+            Player attached = session.contains(player) ? player : session.merge(player);
+            session.remove(attached);
         });
     }
 

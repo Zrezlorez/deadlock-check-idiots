@@ -74,7 +74,8 @@ public class DickService {
             ? GrowthStyle.DICK
             : conversationStyleService.getStyle(platform, scopeId);
 
-        return String.format("Ваш %s вырос на %s. Текущий размер: %s",
+        return String.format(
+            "Ваш %s вырос на %s. Текущий размер: %s",
             style.displayName(),
             convertValue(newValue - oldValue),
             convertValue(newValue)
@@ -94,7 +95,7 @@ public class DickService {
 
     private String convertValue(double sm) {
         if (sm > 100_000_000) {
-            return round(sm / 100_000_000) + "к км";
+            return round(sm / 100_000_000) + " к км";
         }
 
         if (sm > 100_000) {

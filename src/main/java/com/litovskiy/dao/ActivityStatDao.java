@@ -52,6 +52,15 @@ public class ActivityStatDao extends BaseDao {
             .getResultList()));
     }
 
+    public List<Long> findParticipantIds(Platform platform, long scopeId) {
+        return execute(session -> new ArrayList<>(session.createQuery(
+                "select distinct a.playerChatId from ActivityStat a where a.platform = :platform and a.scopeId = :scopeId",
+                Long.class)
+            .setParameter("platform", platform)
+            .setParameter("scopeId", scopeId)
+            .getResultList()));
+    }
+
     private void updateTotals(long playerChatId,
                               Platform platform,
                               long scopeId,

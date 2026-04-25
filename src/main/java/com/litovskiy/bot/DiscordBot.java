@@ -6,6 +6,7 @@ import com.litovskiy.service.AdminCommandService;
 import com.litovskiy.service.AppServices;
 import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.DickService;
+import com.litovskiy.service.LeaderboardService;
 import com.litovskiy.service.LinkService;
 import com.litovskiy.util.BotConfig;
 import com.litovskiy.util.HttpClientFactory;
@@ -22,22 +23,23 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import okhttp3.OkHttpClient;
-import org.jetbrains.annotations.NotNull;
 
 public class DiscordBot extends ListenerAdapter {
 
     private final ActivityService activityService;
     private final ConversationStyleService conversationStyleService;
     private final DickService dickService;
+    private final LeaderboardService leaderboardService;
     private final LinkService linkService;
     private final AdminCommandService adminCommandService;
 
     public DiscordBot(AppServices appServices) {
-        this.activityService = appServices.getActivityService();
-        this.conversationStyleService = appServices.getConversationStyleService();
-        this.dickService = appServices.getDickService();
-        this.linkService = appServices.getLinkService();
-        this.adminCommandService = appServices.getAdminCommandService();
+        this.activityService = appServices.activityService();
+        this.conversationStyleService = appServices.conversationStyleService();
+        this.dickService = appServices.dickService();
+        this.leaderboardService = appServices.leaderboardService();
+        this.linkService = appServices.linkService();
+        this.adminCommandService = appServices.adminCommandService();
     }
 
     @SneakyThrows
@@ -57,6 +59,7 @@ public class DiscordBot extends ListenerAdapter {
         jda.updateCommands()
             .addCommands(
                 Commands.slash("grow", "Вырастить показатель"),
+                Commands.slash("top", "Показать лидерборд"),
                 Commands.slash("link", "Сгенерировать код привязки или привязать профиль")
                     .addOption(OptionType.STRING, "code", "Код из другого бота", false),
                 Commands.slash("style", "Посмотреть или изменить стиль роста на сервере")
@@ -68,7 +71,7 @@ public class DiscordBot extends ListenerAdapter {
     }
 
     @Override
-    public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
+    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         String response = buildSlashResponse(event);
         if (response != null) {
             event.reply(response).queue();
@@ -103,6 +106,7 @@ public class DiscordBot extends ListenerAdapter {
     private String buildSlashResponse(SlashCommandInteractionEvent event) {
         return switch (event.getName()) {
             case "grow" -> buildGrowResponse(event);
+            case "top" -> buildLeaderboardResponse(event);
             case "link" -> buildLinkResponse(event);
             case "style" -> buildStyleResponse(event);
             case "admin" -> adminCommandService.handle(
@@ -117,6 +121,11 @@ public class DiscordBot extends ListenerAdapter {
     private String buildGrowResponse(SlashCommandInteractionEvent event) {
         Long scopeId = event.isFromGuild() ? event.getGuild().getIdLong() : null;
         return dickService.grow(Platform.DISCORD, event.getUser().getIdLong(), scopeId);
+    }
+
+    private String buildLeaderboardResponse(SlashCommandInteractionEvent event) {
+        Long scopeId = event.isFromGuild() ? event.getGuild().getIdLong() : null;
+        return leaderboardService.buildLeaderboard(Platform.DISCORD, event.getUser().getIdLong(), scopeId);
     }
 
     private String buildLinkResponse(SlashCommandInteractionEvent event) {
