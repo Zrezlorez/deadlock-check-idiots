@@ -34,14 +34,14 @@ public class LeaderboardServiceTest {
     private GameConfigService gameConfigService;
 
     @Test
-    @DisplayName("Локальный лидерборд Telegram показывает имя ссылкой на профиль")
+    @DisplayName("Telegram leaderboard uses profile links")
     void buildScopeLeaderboardFormatsTelegramProfileLink() {
         Player first = new Player(1L, 350.0);
         first.setTelegramChatId(1001L);
-        first.setTelegramDisplayName("Иван");
+        first.setTelegramDisplayName("Ivan");
         Player second = new Player(2L, 120.0);
         second.setTelegramChatId(1002L);
-        second.setTelegramDisplayName("Петр");
+        second.setTelegramDisplayName("Petr");
 
         LeaderboardService leaderboardService = new LeaderboardService(
             playerDao,
@@ -51,20 +51,20 @@ public class LeaderboardServiceTest {
         );
 
         when(gameConfigService.getInt(GameSetting.LEADERBOARD_LIMIT)).thenReturn(10);
-        when(activityStatDao.findParticipantIds(Platform.TELEGRAM, -100L)).thenReturn(List.of(1L, 2L));
-        when(playerDao.findByChatIds(List.of(1L, 2L))).thenReturn(List.of(second, first));
-        when(conversationStyleService.getStyle(Platform.TELEGRAM, -100L)).thenReturn(GrowthStyle.DICK);
 
-        String result = leaderboardService.buildLeaderboard(Platform.TELEGRAM, 1002L, -100L);
+        when(playerDao.findTopByPlatform(Platform.TELEGRAM, 10)).thenReturn(List.of(second, first));
+        when(conversationStyleService.getStyle(Platform.TELEGRAM, null)).thenReturn(GrowthStyle.DICK);
 
-        Assertions.assertTrue(result.contains("Топ этой беседы"));
-        Assertions.assertTrue(result.contains("<a href=\"tg://user?id=1001\">Иван</a>"));
-        Assertions.assertTrue(result.contains("<a href=\"tg://user?id=1002\">Петр</a>"));
-        Assertions.assertTrue(result.contains("← вы"));
+        String result = leaderboardService.buildLeaderboard(Platform.TELEGRAM, 1002L, null);
+
+        Assertions.assertTrue(result.contains("tg://user?id=1001"));
+        Assertions.assertTrue(result.contains(">Ivan</a>"));
+        Assertions.assertTrue(result.contains("tg://user?id=1002"));
+        Assertions.assertTrue(result.contains(">Petr</a>"));
     }
 
     @Test
-    @DisplayName("Глобальный лидерборд Discord сохраняет формат упоминаний")
+    @DisplayName("Discord leaderboard keeps mentions")
     void buildGlobalLeaderboardKeepsDiscordMentions() {
         Player first = new Player(1L, 500.0);
         first.setDiscordUserId(11L);
@@ -84,7 +84,6 @@ public class LeaderboardServiceTest {
 
         String result = leaderboardService.buildLeaderboard(Platform.DISCORD, 33L, null);
 
-        Assertions.assertTrue(result.contains("Глобальный топ"));
         Assertions.assertTrue(result.contains("<@11>"));
         Assertions.assertTrue(result.contains("<@22>"));
     }

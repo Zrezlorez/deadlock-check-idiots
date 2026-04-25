@@ -5,6 +5,7 @@ import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -53,8 +54,18 @@ public class DickService {
             int timeRange = gameConfigService.getInt(GameSetting.COOLDOWN_RANGE);
             ChronoUnit timeUnit = gameConfigService.getChronoUnit(GameSetting.COOLDOWN_UNIT);
             LocalDateTime nextAllowed = lastTime.plus(timeRange, timeUnit);
+
+            Duration duration = Duration.between(now, nextAllowed);
+            StringBuilder stringBuilder = new StringBuilder();
+            if (duration.toHours() > 0) {
+                stringBuilder.append(duration.toHours()).append(" ч ");
+            }
+            if (duration.toMinutesPart() > 0) {
+                stringBuilder.append(duration.toMinutesPart()).append(" мин ");
+            }
+            stringBuilder.append(duration.toSecondsPart()).append(" сек ");
             if (now.isBefore(nextAllowed)) {
-                return "Вы уже растили показатель, следующая попытка будет в " + nextAllowed.format(formatter);
+                return "Вы уже растили показатель, следующая попытка будет через:\n" + stringBuilder;
             }
         }
 

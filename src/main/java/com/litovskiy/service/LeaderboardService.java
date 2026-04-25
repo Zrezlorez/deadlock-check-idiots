@@ -52,7 +52,7 @@ public class LeaderboardService {
             Player player = rankedPlayers.get(index);
             builder.append(index + 1)
                 .append(". ")
-                .append(formatPlayer(platform, player))
+                .append(formatPlayer(platform, player, scopeId))
                 .append(" — ")
                 .append(convertValue(player.getSize()));
 
@@ -91,22 +91,26 @@ public class LeaderboardService {
         }
     }
 
-    private String formatPlayer(Platform platform, Player player) {
+    private String formatPlayer(Platform platform, Player player, Long scopeId) {
         Long profileId = platform.getProfileId(player);
         if (profileId == null) {
             return "аккаунт " + player.getChatId();
         }
 
         return switch (platform) {
-            case TELEGRAM -> formatTelegramPlayer(player, profileId);
+            case TELEGRAM -> formatTelegramPlayer(player, profileId, scopeId);
             case DISCORD -> "<@" + profileId + ">";
         };
     }
 
-    private String formatTelegramPlayer(Player player, long profileId) {
+    private String formatTelegramPlayer(Player player, long profileId, Long scopeId) {
         String displayName = player.getTelegramDisplayName();
         if (displayName == null || displayName.isBlank()) {
             displayName = "id " + profileId;
+        }
+
+        if (scopeId != null) {
+            return displayName;
         }
 
         return "<a href=\"tg://user?id=" + profileId + "\">" + escapeHtml(displayName) + "</a>";

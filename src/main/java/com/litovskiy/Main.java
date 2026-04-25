@@ -8,7 +8,7 @@ public class Main {
 
     public static void main(String[] args) {
         AppServices appServices = new AppServices();
-        DiscordBot.start(appServices);
+        //DiscordBot.start(appServices);
         TgBot.start(appServices);
     }
 
