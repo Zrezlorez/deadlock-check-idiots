@@ -10,7 +10,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-import static com.litovskiy.util.StringUtil.convertValue;
+import static com.litovskiy.entity.GrowthStyle.convertValue;
 import static com.litovskiy.util.StringUtil.escapeHtml;
 
 public class LeaderboardService {
@@ -44,8 +44,8 @@ public class LeaderboardService {
 
         GrowthStyle style = conversationStyleService.getStyle(platform, scopeId);
         StringBuilder builder = new StringBuilder(scopeId == null
-            ? "Глобальный топ по показателю " + style.displayName() + ":\n"
-            : "Топ этой беседы по показателю " + style.displayName() + ":\n");
+            ? "Глобальный топ по показателю " + style.getDisplayName() + ":\n"
+            : "Топ этой беседы по показателю " + style.getDisplayName() + ":\n");
 
         int rows = Math.min(limit, rankedPlayers.size());
         for (int index = 0; index < rows; index++) {
@@ -54,7 +54,7 @@ public class LeaderboardService {
                 .append(". ")
                 .append(formatPlayer(platform, player, scopeId))
                 .append(" — ")
-                .append(convertValue(player.getSize()));
+                .append(convertValue(player.getSize(), style));
 
             if (Objects.equals(platform.getProfileId(player), requesterProfileId)) {
                 builder.append(" ← вы");

@@ -30,7 +30,7 @@ public class ConversationStyleService {
 
     public String describeCurrentStyle(Platform platform, long scopeId) {
         GrowthStyle style = getStyle(platform, scopeId);
-        return "Текущий стиль: " + style.key() + " (" + style.displayName() + ")\n"
+        return "Текущий стиль: " + style.getKey() + " (" + style.getDisplayName() + ")\n"
             + "Доступные стили: " + GrowthStyle.availableStyles();
     }
 
@@ -51,7 +51,7 @@ public class ConversationStyleService {
 
         settings.setGrowthStyle(style);
         conversationSettingsDao.save(settings);
-        return "Стиль группы изменен: " + style.displayName() + ".";
+        return "Стиль группы изменен: " + style.getDisplayName() + ".";
     }
 
     public String updateDiscordStyle(long scopeId, String styleKey) {
@@ -63,7 +63,7 @@ public class ConversationStyleService {
         ConversationSettings settings = getOrCreate(Platform.DISCORD, scopeId);
         settings.setGrowthStyle(style);
         conversationSettingsDao.save(settings);
-        return "Стиль сервера изменен: " + style.displayName() + ".";
+        return "Стиль сервера изменен: " + style.getDisplayName() + ".";
     }
 
     private ConversationSettings getOrCreate(Platform platform, long scopeId) {

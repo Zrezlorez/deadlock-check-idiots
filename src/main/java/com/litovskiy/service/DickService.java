@@ -7,11 +7,10 @@ import com.litovskiy.entity.Player;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Random;
 
-import static com.litovskiy.util.StringUtil.convertValue;
+import static com.litovskiy.entity.GrowthStyle.convertValue;
 import static com.litovskiy.util.StringUtil.round;
 
 public class DickService {
@@ -21,7 +20,6 @@ public class DickService {
     private final ActivityService activityService;
     private final ConversationStyleService conversationStyleService;
     private final GameConfigService gameConfigService;
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
     private final Random random;
 
     public DickService(PlayerDao playerDao,
@@ -117,15 +115,15 @@ public class DickService {
             case FAIL -> buildFailMessage(style, oldValue, growthResult.newValue(), diff);
             case CRIT -> String.format(
                 "Джекпот! Ваш %s вырос на %s. Текущий размер: %s",
-                style.displayName(),
-                convertValue(diff),
-                convertValue(growthResult.newValue())
+                style.getDisplayName(),
+                convertValue(diff, style),
+                convertValue(growthResult.newValue(), style)
             );
             case NORMAL -> String.format(
                 "Ваш %s вырос на %s. Текущий размер: %s",
-                style.displayName(),
-                convertValue(diff),
-                convertValue(growthResult.newValue())
+                style.getDisplayName(),
+                convertValue(diff, style),
+                convertValue(growthResult.newValue(), style)
             );
         };
     }
@@ -134,16 +132,16 @@ public class DickService {
         if (Double.compare(oldValue, newValue) == 0) {
             return String.format(
                 "Неудача, но не страшно. Ваш %s не смог уменьшиться ниже нуля. Текущий размер: %s",
-                style.displayName(),
-                convertValue(newValue)
+                style.getDisplayName(),
+                convertValue(newValue, style)
             );
         }
 
         return String.format(
             "Неудача. Ваш %s уменьшился на %s. Текущий размер: %s",
-            style.displayName(),
-            convertValue(diff),
-            convertValue(newValue)
+            style.getDisplayName(),
+            convertValue(diff, style),
+            convertValue(newValue, style)
         );
     }
 

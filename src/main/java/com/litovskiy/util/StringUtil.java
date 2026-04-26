@@ -8,22 +8,6 @@ public final class StringUtil {
     private StringUtil() {
     }
 
-    public static String convertValue(double value) {
-        if (value > 100_000_000) {
-            return round(value / 100_000_000) + " к км";
-        }
-
-        if (value > 100_000) {
-            return round(value / 100_000) + " км";
-        }
-
-        if (value > 100) {
-            return round(value / 100) + " м";
-        }
-
-        return round(value) + " см";
-    }
-
     public static String escapeHtml(String value) {
         if (value == null) {
             return "";
