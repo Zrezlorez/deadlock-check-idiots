@@ -108,6 +108,25 @@ public class LinkService {
             targetPlayer.setLastGrowTime(sourceGrowTime);
         }
 
+        LocalDateTime targetAbilityTime = targetPlayer.getLastAbilityTime();
+        LocalDateTime sourceAbilityTime = sourcePlayer.getLastAbilityTime();
+        if (sourceAbilityTime != null && (targetAbilityTime == null || sourceAbilityTime.isAfter(targetAbilityTime))) {
+            targetPlayer.setLastAbilityTime(sourceAbilityTime);
+        }
+
+        targetPlayer.setPendingFailChanceBonus(Math.max(
+            targetPlayer.getPendingFailChanceBonus(),
+            sourcePlayer.getPendingFailChanceBonus()
+        ));
+        targetPlayer.setPendingCritChanceBonus(Math.max(
+            targetPlayer.getPendingCritChanceBonus(),
+            sourcePlayer.getPendingCritChanceBonus()
+        ));
+        targetPlayer.setPendingGrowthPenalty(Math.max(
+            targetPlayer.getPendingGrowthPenalty(),
+            sourcePlayer.getPendingGrowthPenalty()
+        ));
+
         if (targetPlayer.getTelegramChatId() == null) {
             targetPlayer.setTelegramChatId(sourcePlayer.getTelegramChatId());
         }

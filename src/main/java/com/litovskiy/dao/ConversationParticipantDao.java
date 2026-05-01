@@ -34,4 +34,16 @@ public class ConversationParticipantDao extends BaseDao {
             .setParameter("scopeId", scopeId)
             .getResultList()));
     }
+
+    public boolean exists(long playerChatId, Platform platform, long scopeId) {
+        return execute(session -> session.createQuery(
+                "select c.id from ConversationParticipant c where c.playerChatId = :playerChatId and c.platform = :platform "
+                    + "and c.scopeId = :scopeId",
+                Long.class)
+            .setParameter("playerChatId", playerChatId)
+            .setParameter("platform", platform)
+            .setParameter("scopeId", scopeId)
+            .setMaxResults(1)
+            .uniqueResult() != null);
+    }
 }

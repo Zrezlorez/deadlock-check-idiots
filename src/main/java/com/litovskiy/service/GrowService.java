@@ -13,7 +13,7 @@ import java.util.Random;
 import static com.litovskiy.entity.GrowthStyle.convertValue;
 import static com.litovskiy.util.StringUtil.round;
 
-public class DickService {
+public class GrowService {
 
     private final PlayerDao playerDao;
     private final PlayerAccountService playerAccountService;
@@ -22,7 +22,7 @@ public class DickService {
     private final GameConfigService gameConfigService;
     private final Random random;
 
-    public DickService(PlayerDao playerDao,
+    public GrowService(PlayerDao playerDao,
                        PlayerAccountService playerAccountService,
                        ActivityService activityService,
                        ConversationStyleService conversationStyleService,
@@ -30,7 +30,7 @@ public class DickService {
         this(playerDao, playerAccountService, activityService, conversationStyleService, gameConfigService, new Random());
     }
 
-    public DickService(PlayerDao playerDao,
+    public GrowService(PlayerDao playerDao,
                        PlayerAccountService playerAccountService,
                        ActivityService activityService,
                        ConversationStyleService conversationStyleService,
@@ -74,7 +74,8 @@ public class DickService {
             ? GrowthStyle.DICK
             : conversationStyleService.getStyle(platform, scopeId);
 
-        GrowthResult growthResult = resolveGrowthResult(oldValue, activityBonus);
+        GrowthContext growthContext = consumePendingEffects(player);
+        GrowthResult growthResult = resolveGrowthResult(oldValue, activityBonus, growthContext);
         player.setSize(growthResult.newValue());
         player.setLastGrowTime(now);
         playerDao.save(player);
@@ -82,10 +83,11 @@ public class DickService {
         return buildResultMessage(style, oldValue, growthResult);
     }
 
-    private GrowthResult resolveGrowthResult(double oldValue, double activityBonus) {
+    private GrowthResult resolveGrowthResult(double oldValue, double activityBonus, GrowthContext growthContext) {
         double outcomeRoll = random.nextDouble();
-        double failChance = gameConfigService.getDouble(GameSetting.FAIL_CHANCE);
-        double critChance = gameConfigService.getDouble(GameSetting.CRIT_CHANCE);
+        double failChance = clampChance(gameConfigService.getDouble(GameSetting.FAIL_CHANCE) + growthContext.failChanceBonus());
+        double critChance = clampChance(gameConfigService.getDouble(GameSetting.CRIT_CHANCE) + growthContext.critChanceBonus());
+        critChance = Math.min(critChance, 1.0 - failChance);
 
         if (outcomeRoll < failChance) {
             return buildFailResult(oldValue);
@@ -97,6 +99,7 @@ public class DickService {
             double critMultiplier = gameConfigService.getDouble(GameSetting.CRIT_MULTIPLIER);
             growthMultiplier = 1 + (growthMultiplier - 1) * critMultiplier;
         }
+        growthMultiplier = 1 + (growthMultiplier - 1) * (1 - growthContext.growthPenalty());
 
         double newValue = round(oldValue * growthMultiplier);
         return new GrowthResult(newValue, crit ? Outcome.CRIT : Outcome.NORMAL);
@@ -156,6 +159,22 @@ public class DickService {
         return 1 + (baseGrowth - 1) * slowdown * activityBonus;
     }
 
+    private GrowthContext consumePendingEffects(Player player) {
+        GrowthContext context = new GrowthContext(
+            player.getPendingFailChanceBonus(),
+            player.getPendingCritChanceBonus(),
+            player.getPendingGrowthPenalty()
+        );
+        player.setPendingFailChanceBonus(0.0);
+        player.setPendingCritChanceBonus(0.0);
+        player.setPendingGrowthPenalty(0.0);
+        return context;
+    }
+
+    private double clampChance(double value) {
+        return Math.max(0.0, Math.min(0.95, value));
+    }
+
     private enum Outcome {
         NORMAL,
         CRIT,
@@ -163,5 +182,8 @@ public class DickService {
     }
 
     private record GrowthResult(double newValue, Outcome outcome) {
+    }
+
+    private record GrowthContext(double failChanceBonus, double critChanceBonus, double growthPenalty) {
     }
 }

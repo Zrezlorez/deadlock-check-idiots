@@ -4,7 +4,7 @@ import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 import com.litovskiy.service.ActivityService;
 import com.litovskiy.service.ConversationStyleService;
-import com.litovskiy.service.DickService;
+import com.litovskiy.service.GrowService;
 import com.litovskiy.service.GameConfigService;
 import com.litovskiy.service.GameSetting;
 import com.litovskiy.service.PlayerAccountService;
@@ -25,7 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class DickServiceTest {
+public class GrowServiceTest {
 
     @Mock
     private PlayerDao playerDao;
@@ -58,7 +58,7 @@ public class DickServiceTest {
         when(random.nextDouble()).thenReturn(0.5);
         when(random.nextGaussian()).thenReturn(0.0);
 
-        DickService dickService = new DickService(
+        GrowService growService = new GrowService(
             playerDao,
             playerAccountService,
             activityService,
@@ -67,7 +67,7 @@ public class DickServiceTest {
             random
         );
 
-        String result = dickService.grow(Platform.DISCORD, 22L, 123L);
+        String result = growService.grow(Platform.DISCORD, 22L, 123L);
 
         Assertions.assertFalse(result.isBlank());
         Assertions.assertTrue(player.getSize() > 10.5);
@@ -89,7 +89,7 @@ public class DickServiceTest {
         when(random.nextDouble()).thenReturn(0.2);
         when(random.nextGaussian()).thenReturn(0.0);
 
-        DickService dickService = new DickService(
+        GrowService growService = new GrowService(
             playerDao,
             playerAccountService,
             activityService,
@@ -98,11 +98,44 @@ public class DickServiceTest {
             random
         );
 
-        String result = dickService.grow(Platform.DISCORD, 22L, 123L);
+        String result = growService.grow(Platform.DISCORD, 22L, 123L);
 
         Assertions.assertFalse(result.isBlank());
         Assertions.assertEquals(10.75, player.getSize(), 0.0001);
         verify(playerDao).save(player);
+    }
+
+    @Test
+    @DisplayName("Pending modifiers affect and then clear next growth")
+    void growConsumesPendingModifiers() {
+        Player player = new Player(77L, 10.0);
+        player.setDiscordUserId(22L);
+        player.setPendingFailChanceBonus(0.2);
+        player.setPendingCritChanceBonus(0.3);
+        player.setPendingGrowthPenalty(0.25);
+
+        when(playerAccountService.resolveOrCreate(Platform.DISCORD, 22L)).thenReturn(player);
+        when(activityService.getGrowthBonusMultiplier(Platform.DISCORD, 22L, 123L)).thenReturn(1.0);
+        when(conversationStyleService.getStyle(Platform.DISCORD, 123L)).thenReturn(GrowthStyle.DICK);
+        mockCommonGrowthSettings();
+        when(random.nextDouble()).thenReturn(0.32);
+        when(random.nextGaussian()).thenReturn(0.0);
+
+        GrowService growService = new GrowService(
+            playerDao,
+            playerAccountService,
+            activityService,
+            conversationStyleService,
+            gameConfigService,
+            random
+        );
+
+        growService.grow(Platform.DISCORD, 22L, 123L);
+
+        Assertions.assertEquals(10.56, player.getSize(), 0.0001);
+        Assertions.assertEquals(0.0, player.getPendingFailChanceBonus(), 0.0001);
+        Assertions.assertEquals(0.0, player.getPendingCritChanceBonus(), 0.0001);
+        Assertions.assertEquals(0.0, player.getPendingGrowthPenalty(), 0.0001);
     }
 
     @Test
@@ -117,7 +150,7 @@ public class DickServiceTest {
         mockCommonGrowthSettings();
         when(random.nextDouble()).thenReturn(0.05);
 
-        DickService dickService = new DickService(
+        GrowService growService = new GrowService(
             playerDao,
             playerAccountService,
             activityService,
@@ -126,7 +159,7 @@ public class DickServiceTest {
             random
         );
 
-        String result = dickService.grow(Platform.TELEGRAM, 11L, -100L);
+        String result = growService.grow(Platform.TELEGRAM, 11L, -100L);
 
         Assertions.assertFalse(result.isBlank());
         Assertions.assertEquals(9.0, player.getSize(), 0.0001);
@@ -150,7 +183,7 @@ public class DickServiceTest {
         when(random.nextDouble()).thenReturn(0.5);
         when(random.nextGaussian()).thenReturn(0.0);
 
-        DickService dickService = new DickService(
+        GrowService growService = new GrowService(
             playerDao,
             playerAccountService,
             activityService,
@@ -159,8 +192,8 @@ public class DickServiceTest {
             random
         );
 
-        String firstGrow = dickService.grow(Platform.TELEGRAM, 11L, -100L);
-        String secondGrow = dickService.grow(Platform.DISCORD, 22L, 200L);
+        String firstGrow = growService.grow(Platform.TELEGRAM, 11L, -100L);
+        String secondGrow = growService.grow(Platform.DISCORD, 22L, 200L);
 
         Assertions.assertFalse(firstGrow.isBlank());
         Assertions.assertFalse(secondGrow.isBlank());

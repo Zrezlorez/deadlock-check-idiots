@@ -34,6 +34,9 @@ public class Player {
     @Column(name = "last_grow_time")
     private LocalDateTime lastGrowTime;
 
+    @Column(name = "last_ability_time")
+    private LocalDateTime lastAbilityTime;
+
     @Column(name = "telegram_chat_id")
     private Long telegramChatId;
 
@@ -49,9 +52,22 @@ public class Player {
     @Column(name = "discord_tag")
     private String discordTag;
 
+    @Column(name = "pending_fail_chance_bonus", nullable = false, columnDefinition = "double precision default 0")
+    private double pendingFailChanceBonus;
+
+    @Column(name = "pending_crit_chance_bonus", nullable = false, columnDefinition = "double precision default 0")
+    private double pendingCritChanceBonus;
+
+    @Column(name = "pending_growth_penalty", nullable = false, columnDefinition = "double precision default 0")
+    private double pendingGrowthPenalty;
+
     public Player(Long chatId, double size) {
         this.chatId = chatId;
         this.size = size;
         this.lastGrowTime = null;
+        this.lastAbilityTime = null;
+        this.pendingFailChanceBonus = 0.0;
+        this.pendingCritChanceBonus = 0.0;
+        this.pendingGrowthPenalty = 0.0;
     }
 }

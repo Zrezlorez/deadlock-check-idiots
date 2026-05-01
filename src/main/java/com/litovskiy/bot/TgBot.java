@@ -2,12 +2,13 @@ package com.litovskiy.bot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.litovskiy.entity.Platform;
+import com.litovskiy.service.AbilityService;
 import com.litovskiy.service.ActivityService;
 import com.litovskiy.service.AdminCommandService;
 import com.litovskiy.service.AppServices;
 import com.litovskiy.service.ConversationParticipantService;
 import com.litovskiy.service.ConversationStyleService;
-import com.litovskiy.service.DickService;
+import com.litovskiy.service.GrowService;
 import com.litovskiy.service.LeaderboardService;
 import com.litovskiy.service.LinkService;
 import com.litovskiy.service.PlayerAccountService;
@@ -28,9 +29,10 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     private final ActivityService activityService;
+    private final AbilityService abilityService;
     private final ConversationParticipantService conversationParticipantService;
     private final ConversationStyleService conversationStyleService;
-    private final DickService dickService;
+    private final GrowService growService;
     private final LeaderboardService leaderboardService;
     private final LinkService linkService;
     private final AdminCommandService adminCommandService;
@@ -42,9 +44,10 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     public TgBot(AppServices appServices) {
         this.activityService = appServices.activityService();
+        this.abilityService = appServices.abilityService();
         this.conversationParticipantService = appServices.conversationParticipantService();
         this.conversationStyleService = appServices.conversationStyleService();
-        this.dickService = appServices.dickService();
+        this.growService = appServices.dickService();
         this.leaderboardService = appServices.leaderboardService();
         this.linkService = appServices.linkService();
         this.adminCommandService = appServices.adminCommandService();
@@ -115,8 +118,8 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         if (command == null) {
             return;
         }
-        
-        BotReply response = buildResponse(command, commandParts, chatId, profileId);
+
+        BotReply response = buildResponse(update, command, commandParts, chatId, profileId);
         if (response == null) {
             return;
         }
@@ -124,9 +127,12 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         sendMessage(chatId, messageThreadId, replyToMessageId, response);
     }
 
-    private BotReply buildResponse(String command, String[] commandParts, long chatId, long profileId) {
+    private BotReply buildResponse(Update update, String command, String[] commandParts, long chatId, long profileId) {
         return switch (command) {
             case "/grow" -> new BotReply(buildGrowResponse(chatId, profileId), false);
+            case "/fuck" -> new BotReply(buildJinxResponse(update, chatId, profileId), false);
+            case "/jackpot" -> new BotReply(abilityService.increaseOwnCritChance(Platform.TELEGRAM, chatId, profileId), false);
+            case "/slow" -> new BotReply(buildSlowResponse(update, chatId, profileId), false);
             case "/top", "/leaderboard" -> new BotReply(buildLeaderboardResponse(chatId, profileId), true);
             case "/link" -> new BotReply(buildLinkResponse(commandParts, profileId), false);
             case "/style" -> new BotReply(buildStyleResponse(commandParts, chatId, profileId), false);
@@ -141,7 +147,37 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     private String buildGrowResponse(long chatId, long profileId) {
         Long scopeId = chatId < 0 ? chatId : null;
-        return dickService.grow(Platform.TELEGRAM, profileId, scopeId);
+        return growService.grow(Platform.TELEGRAM, profileId, scopeId);
+    }
+
+    private String buildJinxResponse(Update update, long chatId, long profileId) {
+        if (chatId >= 0) {
+            return "Эта способность доступна только в группах.";
+        }
+
+        User target = extractReplyTarget(update);
+        if (target == null) {
+            return "Ответьте этой командой на сообщение цели.";
+        }
+
+        playerAccountService.updateTelegramProfile(target.getId(), formatTelegramDisplayName(target), target.getUserName());
+        conversationParticipantService.registerParticipant(Platform.TELEGRAM, target.getId(), chatId);
+        return abilityService.increaseEnemyFailChance(Platform.TELEGRAM, profileId, chatId, target.getId());
+    }
+
+    private String buildSlowResponse(Update update, long chatId, long profileId) {
+        if (chatId >= 0) {
+            return "Эта способность доступна только в группах.";
+        }
+
+        User target = extractReplyTarget(update);
+        if (target == null) {
+            return "Ответьте этой командой на сообщение цели.";
+        }
+
+        playerAccountService.updateTelegramProfile(target.getId(), formatTelegramDisplayName(target), target.getUserName());
+        conversationParticipantService.registerParticipant(Platform.TELEGRAM, target.getId(), chatId);
+        return abilityService.reduceEnemyGrowth(Platform.TELEGRAM, profileId, chatId, target.getId());
     }
 
     private String buildLeaderboardResponse(long chatId, long profileId) {
@@ -219,6 +255,13 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
                 );
                 conversationParticipantService.registerParticipant(Platform.TELEGRAM, member.getId(), chatId);
             });
+    }
+
+    private User extractReplyTarget(Update update) {
+        if (update.getMessage() == null || update.getMessage().getReplyToMessage() == null) {
+            return null;
+        }
+        return update.getMessage().getReplyToMessage().getFrom();
     }
 
     private String normalizeCommand(String rawCommand) {

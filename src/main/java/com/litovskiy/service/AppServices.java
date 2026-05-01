@@ -16,7 +16,8 @@ public class AppServices {
     private final ConversationStyleService conversationStyleService;
     private final ConversationParticipantService conversationParticipantService;
     private final ActivityService activityService;
-    private final DickService dickService;
+    private final AbilityService abilityService;
+    private final GrowService growService;
     private final LeaderboardService leaderboardService;
     private final LinkService linkService;
     private final AdminCommandService adminCommandService;
@@ -38,7 +39,14 @@ public class AppServices {
             new VoiceSessionDao(),
             gameConfigService
         );
-        this.dickService = new DickService(
+        this.abilityService = new AbilityService(
+            playerDao,
+            playerAccountService,
+            conversationParticipantDao,
+            gameConfigService,
+            conversationStyleService
+        );
+        this.growService = new GrowService(
             playerDao,
             playerAccountService,
             activityService,
@@ -88,8 +96,12 @@ public class AppServices {
         return activityService;
     }
 
-    public DickService dickService() {
-        return dickService;
+    public AbilityService abilityService() {
+        return abilityService;
+    }
+
+    public GrowService dickService() {
+        return growService;
     }
 
     public LeaderboardService leaderboardService() {

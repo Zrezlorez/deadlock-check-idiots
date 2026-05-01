@@ -117,8 +117,15 @@ public class PlayerDao extends BaseDao {
     private void copyState(Player source, Player target) {
         target.setSize(source.getSize());
         target.setLastGrowTime(source.getLastGrowTime());
+        if (source.getLastAbilityTime() != null
+            && (target.getLastAbilityTime() == null || source.getLastAbilityTime().isAfter(target.getLastAbilityTime()))) {
+            target.setLastAbilityTime(source.getLastAbilityTime());
+        }
         target.setTelegramChatId(source.getTelegramChatId());
         target.setDiscordUserId(source.getDiscordUserId());
+        target.setPendingFailChanceBonus(Math.max(target.getPendingFailChanceBonus(), source.getPendingFailChanceBonus()));
+        target.setPendingCritChanceBonus(Math.max(target.getPendingCritChanceBonus(), source.getPendingCritChanceBonus()));
+        target.setPendingGrowthPenalty(Math.max(target.getPendingGrowthPenalty(), source.getPendingGrowthPenalty()));
         if (source.getTelegramDisplayName() != null) {
             target.setTelegramDisplayName(source.getTelegramDisplayName());
         }
