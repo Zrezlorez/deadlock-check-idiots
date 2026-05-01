@@ -5,6 +5,7 @@ import com.litovskiy.entity.Platform;
 import com.litovskiy.service.ActivityService;
 import com.litovskiy.service.AdminCommandService;
 import com.litovskiy.service.AppServices;
+import com.litovskiy.service.ConversationParticipantService;
 import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.DickService;
 import com.litovskiy.service.LeaderboardService;
@@ -27,6 +28,7 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     private final ActivityService activityService;
+    private final ConversationParticipantService conversationParticipantService;
     private final ConversationStyleService conversationStyleService;
     private final DickService dickService;
     private final LeaderboardService leaderboardService;
@@ -40,6 +42,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     public TgBot(AppServices appServices) {
         this.activityService = appServices.activityService();
+        this.conversationParticipantService = appServices.conversationParticipantService();
         this.conversationStyleService = appServices.conversationStyleService();
         this.dickService = appServices.dickService();
         this.leaderboardService = appServices.leaderboardService();
@@ -85,6 +88,13 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
                 formatTelegramDisplayName(update.getMessage().getFrom()),
                 update.getMessage().getFrom().getUserName()
             );
+            if (update.getMessage().getChatId() < 0) {
+                conversationParticipantService.registerParticipant(
+                    Platform.TELEGRAM,
+                    update.getMessage().getFrom().getId(),
+                    update.getMessage().getChatId()
+                );
+            }
         }
 
         if (!update.getMessage().hasText()) {
@@ -105,7 +115,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         if (command == null) {
             return;
         }
-
+        
         BotReply response = buildResponse(command, commandParts, chatId, profileId);
         if (response == null) {
             return;
@@ -197,6 +207,18 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
                 update.getMessage().getFrom().getId()
             );
         }
+
+        long chatId = update.getMessage().getChatId();
+        update.getMessage().getNewChatMembers().stream()
+            .filter(member -> !member.getIsBot())
+            .forEach(member -> {
+                playerAccountService.updateTelegramProfile(
+                    member.getId(),
+                    formatTelegramDisplayName(member),
+                    member.getUserName()
+                );
+                conversationParticipantService.registerParticipant(Platform.TELEGRAM, member.getId(), chatId);
+            });
     }
 
     private String normalizeCommand(String rawCommand) {

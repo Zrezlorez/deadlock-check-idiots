@@ -2,6 +2,7 @@ package com.litovskiy.service;
 
 import com.litovskiy.dao.ActivityStatDao;
 import com.litovskiy.dao.AppSettingDao;
+import com.litovskiy.dao.ConversationParticipantDao;
 import com.litovskiy.dao.ConversationSettingsDao;
 import com.litovskiy.dao.LinkCodeDao;
 import com.litovskiy.dao.PlayerDao;
@@ -13,6 +14,7 @@ public class AppServices {
     private final GameConfigService gameConfigService;
     private final PlayerAccountService playerAccountService;
     private final ConversationStyleService conversationStyleService;
+    private final ConversationParticipantService conversationParticipantService;
     private final ActivityService activityService;
     private final DickService dickService;
     private final LeaderboardService leaderboardService;
@@ -21,10 +23,15 @@ public class AppServices {
 
     public AppServices() {
         ActivityStatDao activityStatDao = new ActivityStatDao();
+        ConversationParticipantDao conversationParticipantDao = new ConversationParticipantDao();
         this.playerDao = new PlayerDao();
         this.gameConfigService = new GameConfigService(new AppSettingDao());
         this.playerAccountService = new PlayerAccountService(playerDao, gameConfigService);
         this.conversationStyleService = new ConversationStyleService(new ConversationSettingsDao());
+        this.conversationParticipantService = new ConversationParticipantService(
+            playerAccountService,
+            conversationParticipantDao
+        );
         this.activityService = new ActivityService(
             playerAccountService,
             activityStatDao,
@@ -40,7 +47,7 @@ public class AppServices {
         );
         this.leaderboardService = new LeaderboardService(
             playerDao,
-            activityStatDao,
+            conversationParticipantDao,
             conversationStyleService,
             gameConfigService
         );
@@ -71,6 +78,10 @@ public class AppServices {
 
     public ConversationStyleService conversationStyleService() {
         return conversationStyleService;
+    }
+
+    public ConversationParticipantService conversationParticipantService() {
+        return conversationParticipantService;
     }
 
     public ActivityService activityService() {

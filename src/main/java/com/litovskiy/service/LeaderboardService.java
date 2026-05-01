@@ -1,6 +1,6 @@
 package com.litovskiy.service;
 
-import com.litovskiy.dao.ActivityStatDao;
+import com.litovskiy.dao.ConversationParticipantDao;
 import com.litovskiy.dao.PlayerDao;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
@@ -16,16 +16,16 @@ import static com.litovskiy.util.StringUtil.escapeHtml;
 public class LeaderboardService {
 
     private final PlayerDao playerDao;
-    private final ActivityStatDao activityStatDao;
+    private final ConversationParticipantDao conversationParticipantDao;
     private final ConversationStyleService conversationStyleService;
     private final GameConfigService gameConfigService;
 
     public LeaderboardService(PlayerDao playerDao,
-                              ActivityStatDao activityStatDao,
+                              ConversationParticipantDao conversationParticipantDao,
                               ConversationStyleService conversationStyleService,
                               GameConfigService gameConfigService) {
         this.playerDao = playerDao;
-        this.activityStatDao = activityStatDao;
+        this.conversationParticipantDao = conversationParticipantDao;
         this.conversationStyleService = conversationStyleService;
         this.gameConfigService = gameConfigService;
     }
@@ -68,7 +68,7 @@ public class LeaderboardService {
     }
 
     private List<Player> findScopeLeaderboard(Platform platform, long scopeId) {
-        List<Long> participantIds = activityStatDao.findParticipantIds(platform, scopeId);
+        List<Long> participantIds = conversationParticipantDao.findParticipantIds(platform, scopeId);
         return playerDao.findByChatIds(participantIds).stream()
             .filter(player -> platform.getProfileId(player) != null)
             .sorted(Comparator.comparingDouble(Player::getSize).reversed())

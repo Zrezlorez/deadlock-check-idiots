@@ -1,4 +1,4 @@
-import com.litovskiy.dao.ActivityStatDao;
+import com.litovskiy.dao.ConversationParticipantDao;
 import com.litovskiy.dao.PlayerDao;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
@@ -25,7 +25,7 @@ public class LeaderboardServiceTest {
     private PlayerDao playerDao;
 
     @Mock
-    private ActivityStatDao activityStatDao;
+    private ConversationParticipantDao conversationParticipantDao;
 
     @Mock
     private ConversationStyleService conversationStyleService;
@@ -45,7 +45,7 @@ public class LeaderboardServiceTest {
 
         LeaderboardService leaderboardService = new LeaderboardService(
             playerDao,
-            activityStatDao,
+            conversationParticipantDao,
             conversationStyleService,
             gameConfigService
         );
@@ -73,7 +73,7 @@ public class LeaderboardServiceTest {
 
         LeaderboardService leaderboardService = new LeaderboardService(
             playerDao,
-            activityStatDao,
+            conversationParticipantDao,
             conversationStyleService,
             gameConfigService
         );
@@ -86,5 +86,32 @@ public class LeaderboardServiceTest {
 
         Assertions.assertTrue(result.contains("<@11>"));
         Assertions.assertTrue(result.contains("<@22>"));
+    }
+
+    @Test
+    @DisplayName("Scoped leaderboard uses registered participants instead of activity stats")
+    void buildScopeLeaderboardUsesConversationParticipants() {
+        Player first = new Player(10L, 500.0);
+        first.setDiscordUserId(101L);
+        Player second = new Player(20L, 100.0);
+        second.setDiscordUserId(202L);
+
+        LeaderboardService leaderboardService = new LeaderboardService(
+            playerDao,
+            conversationParticipantDao,
+            conversationStyleService,
+            gameConfigService
+        );
+
+        when(gameConfigService.getInt(GameSetting.LEADERBOARD_LIMIT)).thenReturn(10);
+        when(conversationParticipantDao.findParticipantIds(Platform.DISCORD, 777L)).thenReturn(List.of(20L, 10L));
+        when(playerDao.findByChatIds(List.of(20L, 10L))).thenReturn(List.of(second, first));
+        when(conversationStyleService.getStyle(Platform.DISCORD, 777L)).thenReturn(GrowthStyle.DICK);
+
+        String result = leaderboardService.buildLeaderboard(Platform.DISCORD, 202L, 777L);
+
+        Assertions.assertTrue(result.contains("<@101>"));
+        Assertions.assertTrue(result.contains("<@202>"));
+        Assertions.assertTrue(result.contains("← вы"));
     }
 }

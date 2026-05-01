@@ -1,6 +1,7 @@
 package com.litovskiy.dao;
 
 import com.litovskiy.entity.ActivityStat;
+import com.litovskiy.entity.ConversationParticipant;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 import com.litovskiy.entity.VoiceSession;
@@ -76,6 +77,7 @@ public class PlayerDao extends BaseDao {
             Player attachedSource = session.get(Player.class, sourcePlayer.getChatId());
             if (attachedSource != null && !attachedSource.getChatId().equals(attachedTarget.getChatId())) {
                 mergeActivityStats(session, attachedSource.getChatId(), attachedTarget.getChatId());
+                mergeConversationParticipants(session, attachedSource.getChatId(), attachedTarget.getChatId());
                 mergeVoiceSessions(session, attachedSource.getChatId(), attachedTarget.getChatId());
                 attachedSource.setTelegramChatId(null);
                 attachedSource.setDiscordUserId(null);
@@ -183,6 +185,33 @@ public class PlayerDao extends BaseDao {
                 targetSession.setStartedAt(sourceSession.getStartedAt());
             }
             session.remove(sourceSession);
+        }
+    }
+
+    private void mergeConversationParticipants(org.hibernate.Session session, long sourcePlayerChatId, long targetPlayerChatId) {
+        List<ConversationParticipant> sourceParticipants = session.createQuery(
+                "from ConversationParticipant c where c.playerChatId = :playerChatId",
+                ConversationParticipant.class)
+            .setParameter("playerChatId", sourcePlayerChatId)
+            .getResultList();
+
+        for (ConversationParticipant sourceParticipant : sourceParticipants) {
+            ConversationParticipant targetParticipant = session.createQuery(
+                    "from ConversationParticipant c where c.playerChatId = :playerChatId and c.platform = :platform "
+                        + "and c.scopeId = :scopeId",
+                    ConversationParticipant.class)
+                .setParameter("playerChatId", targetPlayerChatId)
+                .setParameter("platform", sourceParticipant.getPlatform())
+                .setParameter("scopeId", sourceParticipant.getScopeId())
+                .setMaxResults(1)
+                .uniqueResult();
+
+            if (targetParticipant == null) {
+                sourceParticipant.setPlayerChatId(targetPlayerChatId);
+                continue;
+            }
+
+            session.remove(sourceParticipant);
         }
     }
 

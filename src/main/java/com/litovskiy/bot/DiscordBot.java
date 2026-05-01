@@ -4,6 +4,7 @@ import com.litovskiy.entity.Platform;
 import com.litovskiy.service.ActivityService;
 import com.litovskiy.service.AdminCommandService;
 import com.litovskiy.service.AppServices;
+import com.litovskiy.service.ConversationParticipantService;
 import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.DickService;
 import com.litovskiy.service.LeaderboardService;
@@ -28,6 +29,7 @@ import okhttp3.OkHttpClient;
 public class DiscordBot extends ListenerAdapter {
 
     private final ActivityService activityService;
+    private final ConversationParticipantService conversationParticipantService;
     private final ConversationStyleService conversationStyleService;
     private final DickService dickService;
     private final LeaderboardService leaderboardService;
@@ -37,6 +39,7 @@ public class DiscordBot extends ListenerAdapter {
 
     public DiscordBot(AppServices appServices) {
         this.activityService = appServices.activityService();
+        this.conversationParticipantService = appServices.conversationParticipantService();
         this.conversationStyleService = appServices.conversationStyleService();
         this.dickService = appServices.dickService();
         this.leaderboardService = appServices.leaderboardService();
@@ -76,6 +79,13 @@ public class DiscordBot extends ListenerAdapter {
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         playerAccountService.updateDiscordTag(event.getUser().getIdLong(), formatDiscordTag(event.getUser()));
+        if (event.isFromGuild()) {
+            conversationParticipantService.registerParticipant(
+                Platform.DISCORD,
+                event.getUser().getIdLong(),
+                event.getGuild().getIdLong()
+            );
+        }
         String response = buildSlashResponse(event);
         if (response != null) {
             event.reply(response).queue();
@@ -89,6 +99,11 @@ public class DiscordBot extends ListenerAdapter {
         }
 
         playerAccountService.updateDiscordTag(event.getAuthor().getIdLong(), formatDiscordTag(event.getAuthor()));
+        conversationParticipantService.registerParticipant(
+            Platform.DISCORD,
+            event.getAuthor().getIdLong(),
+            event.getGuild().getIdLong()
+        );
         activityService.recordMessage(Platform.DISCORD, event.getAuthor().getIdLong(), event.getGuild().getIdLong());
     }
 
@@ -97,6 +112,12 @@ public class DiscordBot extends ListenerAdapter {
         if (event.getMember().getUser().isBot()) {
             return;
         }
+
+        conversationParticipantService.registerParticipant(
+            Platform.DISCORD,
+            event.getMember().getIdLong(),
+            event.getGuild().getIdLong()
+        );
 
         if (event.getChannelLeft() != null && event.getChannelJoined() == null) {
             activityService.endVoiceSession(Platform.DISCORD, event.getMember().getIdLong());

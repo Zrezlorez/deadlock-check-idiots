@@ -2,6 +2,7 @@ package com.litovskiy.config;
 
 import com.litovskiy.entity.ActivityStat;
 import com.litovskiy.entity.AppSetting;
+import com.litovskiy.entity.ConversationParticipant;
 import com.litovskiy.entity.ConversationSettings;
 import com.litovskiy.entity.Player;
 import com.litovskiy.entity.LinkCode;
@@ -40,6 +41,7 @@ public class HibernateUtil {
             .addAnnotatedClass(LinkCode.class)
             .addAnnotatedClass(ActivityStat.class)
             .addAnnotatedClass(VoiceSession.class)
+            .addAnnotatedClass(ConversationParticipant.class)
             .addAnnotatedClass(ConversationSettings.class)
             .addAnnotatedClass(AppSetting.class)
             .getMetadataBuilder()
