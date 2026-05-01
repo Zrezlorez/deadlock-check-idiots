@@ -18,6 +18,18 @@ public enum GrowthStyle {
 
     EMOTIONAL_INTELLIGENCE("emotional_intelligence", "эмоциональный интеллект",
         Map.of(1, " женских сил")
+    ),
+
+    NATIONALISM("nationalism", "чуркость",
+        Map.of(1, " см члена в барашке",
+            100, " м члена в барашке",
+            100_000, " км члена в барашке",
+            100_000_000, "к км члена в барашке")
+    ),
+
+    RUSSIAN("russian", "русскость",
+        Map.of(1, " год терпильности",
+            100, " век терпильности")
     );
 
     private final String key;
