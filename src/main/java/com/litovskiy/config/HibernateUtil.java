@@ -47,7 +47,9 @@ public class HibernateUtil {
             .getMetadataBuilder()
             .build();
 
-        return metadata.getSessionFactoryBuilder().build();
+        SessionFactory sessionFactory = metadata.getSessionFactoryBuilder().build();
+        SchemaMigration.apply(sessionFactory);
+        return sessionFactory;
     }
 
 }
