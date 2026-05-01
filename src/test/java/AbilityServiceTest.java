@@ -1,8 +1,10 @@
 import com.litovskiy.dao.ConversationParticipantDao;
 import com.litovskiy.dao.PlayerDao;
+import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 import com.litovskiy.service.AbilityService;
+import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.GameConfigService;
 import com.litovskiy.service.GameSetting;
 import com.litovskiy.service.PlayerAccountService;
@@ -38,6 +40,9 @@ public class AbilityServiceTest {
     @Mock
     private GameConfigService gameConfigService;
 
+    @Mock
+    private ConversationStyleService conversationStyleService;
+
     @Test
     @DisplayName("Enemy fail chance ability spends size and applies pending fail bonus")
     void increaseEnemyFailChanceAppliesDebuff() {
@@ -47,6 +52,7 @@ public class AbilityServiceTest {
             playerAccountService,
             conversationParticipantDao,
             gameConfigService,
+            conversationStyleService,
             clock
         );
 
@@ -60,6 +66,7 @@ public class AbilityServiceTest {
         when(conversationParticipantDao.exists(2L, Platform.TELEGRAM, -100L)).thenReturn(true);
         when(gameConfigService.getDouble(GameSetting.ENEMY_FAIL_COST_PERCENT)).thenReturn(0.04);
         when(gameConfigService.getDouble(GameSetting.ENEMY_FAIL_CHANCE_BONUS)).thenReturn(0.18);
+        when(conversationStyleService.getStyle(Platform.TELEGRAM, -100L)).thenReturn(GrowthStyle.DICK);
 
         String result = abilityService.increaseEnemyFailChance(Platform.TELEGRAM, 10L, -100L, 20L);
 
@@ -80,6 +87,7 @@ public class AbilityServiceTest {
             playerAccountService,
             conversationParticipantDao,
             gameConfigService,
+            conversationStyleService,
             clock
         );
 
@@ -89,8 +97,9 @@ public class AbilityServiceTest {
         when(playerAccountService.resolveOrCreate(Platform.DISCORD, 50L)).thenReturn(actor);
         when(gameConfigService.getDouble(GameSetting.SELF_CRIT_COST_PERCENT)).thenReturn(0.02);
         when(gameConfigService.getDouble(GameSetting.SELF_CRIT_CHANCE_BONUS)).thenReturn(0.25);
+        when(conversationStyleService.getStyle(Platform.DISCORD, 777L)).thenReturn(GrowthStyle.DICK);
 
-        String result = abilityService.increaseOwnCritChance(Platform.DISCORD, 50L);
+        String result = abilityService.increaseOwnCritChance(Platform.DISCORD, 777L, 50L);
 
         Assertions.assertTrue(result.contains("25"));
         Assertions.assertEquals(98.0, actor.getSize(), 0.0001);
@@ -107,6 +116,7 @@ public class AbilityServiceTest {
             playerAccountService,
             conversationParticipantDao,
             gameConfigService,
+            conversationStyleService,
             clock
         );
 
@@ -138,6 +148,7 @@ public class AbilityServiceTest {
             playerAccountService,
             conversationParticipantDao,
             gameConfigService,
+            conversationStyleService,
             clock
         );
 
@@ -149,7 +160,7 @@ public class AbilityServiceTest {
         when(gameConfigService.getInt(GameSetting.ABILITY_COOLDOWN_RANGE)).thenReturn(8);
         when(gameConfigService.getChronoUnit(GameSetting.ABILITY_COOLDOWN_UNIT)).thenReturn(ChronoUnit.HOURS);
 
-        String result = abilityService.increaseOwnCritChance(Platform.TELEGRAM, 10L);
+        String result = abilityService.increaseOwnCritChance(Platform.TELEGRAM, -100L, 10L);
 
         Assertions.assertTrue(result.contains("перезарядке"));
         verify(playerDao, never()).save(actor);
