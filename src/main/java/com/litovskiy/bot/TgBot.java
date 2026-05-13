@@ -214,7 +214,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
             return "Ответьте этой командой на сообщение цели.";
         }
 
-        if (commandParts.length < 1) {
+        if (commandParts.length < 2) {
             return "Нужно указать размер перевода";
         }
 
