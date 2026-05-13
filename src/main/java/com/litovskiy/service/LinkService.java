@@ -17,31 +17,28 @@ public class LinkService {
     private final PlayerDao playerDao;
     private final LinkCodeDao linkCodeDao;
     private final PlayerAccountService playerAccountService;
-    private final GameConfigService gameConfigService;
     private final SecureRandom random;
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     public LinkService(PlayerDao playerDao,
                        LinkCodeDao linkCodeDao,
-                       PlayerAccountService playerAccountService,
-                       GameConfigService gameConfigService) {
-        this(playerDao, linkCodeDao, playerAccountService, gameConfigService, new SecureRandom());
+                       PlayerAccountService playerAccountService) {
+        this(playerDao, linkCodeDao, playerAccountService, new SecureRandom());
     }
 
     public LinkService(PlayerDao playerDao,
                        LinkCodeDao linkCodeDao,
                        PlayerAccountService playerAccountService,
-                       GameConfigService gameConfigService,
                        SecureRandom random) {
         this.playerDao = playerDao;
         this.linkCodeDao = linkCodeDao;
         this.playerAccountService = playerAccountService;
-        this.gameConfigService = gameConfigService;
         this.random = random;
     }
 
     public String createCode(Platform platform, long profileId) {
         Player player = playerAccountService.resolveOrCreate(platform, profileId);
+        int minutes = 10;
         LocalDateTime now = LocalDateTime.now();
 
         linkCodeDao.deleteExpired(now);
@@ -54,7 +51,7 @@ public class LinkService {
             nextCode(),
             player.getChatId(),
             platform,
-            now.plusMinutes(gameConfigService.getInt(GameSetting.LINK_CODE_LIFETIME_MINUTES))
+            now.plusMinutes(minutes)
         );
         linkCodeDao.save(linkCode);
 
@@ -114,9 +111,9 @@ public class LinkService {
             targetPlayer.setLastAbilityTime(sourceAbilityTime);
         }
 
-        targetPlayer.setPendingFailChanceBonus(Math.max(
-            targetPlayer.getPendingFailChanceBonus(),
-            sourcePlayer.getPendingFailChanceBonus()
+        targetPlayer.setPendingFailChancePenalty(Math.max(
+            targetPlayer.getPendingFailChancePenalty(),
+            sourcePlayer.getPendingFailChancePenalty()
         ));
         targetPlayer.setPendingCritChanceBonus(Math.max(
             targetPlayer.getPendingCritChanceBonus(),
@@ -158,7 +155,7 @@ public class LinkService {
     }
 
     private String nextCode() {
-        int codeLength = gameConfigService.getInt(GameSetting.LINK_CODE_LENGTH);
+        int codeLength = 6;
         StringBuilder builder = new StringBuilder(codeLength);
         for (int i = 0; i < codeLength; i++) {
             builder.append(CODE_ALPHABET.charAt(random.nextInt(CODE_ALPHABET.length())));

@@ -123,7 +123,7 @@ public class PlayerDao extends BaseDao {
         }
         target.setTelegramChatId(source.getTelegramChatId());
         target.setDiscordUserId(source.getDiscordUserId());
-        target.setPendingFailChanceBonus(Math.max(target.getPendingFailChanceBonus(), source.getPendingFailChanceBonus()));
+        target.setPendingFailChancePenalty(Math.max(target.getPendingFailChancePenalty(), source.getPendingFailChancePenalty()));
         target.setPendingCritChanceBonus(Math.max(target.getPendingCritChanceBonus(), source.getPendingCritChanceBonus()));
         target.setPendingGrowthPenalty(Math.max(target.getPendingGrowthPenalty(), source.getPendingGrowthPenalty()));
         if (source.getTelegramDisplayName() != null) {

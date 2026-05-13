@@ -47,11 +47,11 @@ public class AdminCommandService {
     private String showConfig() {
         StringBuilder builder = new StringBuilder("Текущие настройки:\n");
         for (Map.Entry<GameSetting, String> entry : gameConfigService.listEffectiveValues().entrySet()) {
-            builder.append(entry.getKey().key())
+            builder.append(entry.getKey().getKey())
                 .append(" = ")
                 .append(entry.getValue())
                 .append(" | ")
-                .append(entry.getKey().description())
+                .append(entry.getKey().getDescription())
                 .append('\n');
         }
         return builder.toString().trim();
@@ -69,7 +69,7 @@ public class AdminCommandService {
 
         try {
             gameConfigService.set(setting, parts[2]);
-            return "Настройка обновлена: " + setting.key() + " = " + gameConfigService.getRawValue(setting);
+            return "Настройка обновлена: " + setting.getKey() + " = " + gameConfigService.getRawValue(setting);
         } catch (RuntimeException e) {
             return "Не удалось сохранить настройку: " + e.getMessage();
         }
@@ -86,7 +86,7 @@ public class AdminCommandService {
         }
 
         gameConfigService.reset(setting);
-        return "Настройка сброшена к дефолту: " + setting.key() + " = " + setting.defaultValue();
+        return "Настройка сброшена к дефолту: " + setting.getKey() + " = " + setting.getDefaultValue();
     }
 
     private String handlePlayer(String[] parts) {
@@ -199,7 +199,7 @@ public class AdminCommandService {
 
     private String availableSettings() {
         return Arrays.stream(GameSetting.values())
-            .map(GameSetting::key)
+            .map(GameSetting::getKey)
             .reduce((left, right) -> left + ", " + right)
             .orElse("");
     }

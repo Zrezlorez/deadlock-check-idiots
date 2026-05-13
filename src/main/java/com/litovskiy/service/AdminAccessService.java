@@ -25,7 +25,7 @@ public class AdminAccessService {
     }
 
     public String describeConfiguration() {
-        return "Добавьте свои id в application.properties: admin.telegramUserIds и/или admin.discordUserIds";
+        return "Куда мы лезем?";
     }
 
     private Set<Long> parseIds(String rawValue) {

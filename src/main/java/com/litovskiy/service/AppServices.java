@@ -62,8 +62,7 @@ public class AppServices {
         this.linkService = new LinkService(
             playerDao,
             new LinkCodeDao(),
-            playerAccountService,
-            gameConfigService
+            playerAccountService
         );
         this.adminCommandService = new AdminCommandService(
             new AdminAccessService(),

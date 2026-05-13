@@ -18,10 +18,6 @@ public final class BotConfig {
     }
 
     private static String require(String key) {
-        String value = PropsManager.getProps().getProperty(key);
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException("Missing required property: " + key);
-        }
-        return value;
+        return PropsManager.getProps().getProperty(key);
     }
 }

@@ -54,8 +54,13 @@ public class DiscordBot extends ListenerAdapter {
 
     @SneakyThrows
     public static void start(AppServices appServices) {
+        String token = BotConfig.discordToken();
+        if (token == null || token.isBlank()) {
+            System.out.println("Discord bot is not enabled because token is empty");
+            return;
+        }
         OkHttpClient okHttpClient = HttpClientFactory.create();
-        JDA jda = JDABuilder.createDefault(BotConfig.discordToken())
+        JDA jda = JDABuilder.createDefault(token)
             .enableIntents(GatewayIntent.GUILD_MESSAGES, GatewayIntent.GUILD_VOICE_STATES)
             .setHttpClient(okHttpClient)
             .addEventListeners(new DiscordBot(appServices))
@@ -63,6 +68,7 @@ public class DiscordBot extends ListenerAdapter {
 
         jda.awaitReady();
         registerCommands(jda);
+        System.out.println("Discord bot started");
     }
 
     private static void registerCommands(JDA jda) {
@@ -71,9 +77,14 @@ public class DiscordBot extends ListenerAdapter {
                 Commands.slash("grow", "Вырастить показатель"),
                 Commands.slash("fuck", "Повысить шанс неудачи у цели")
                     .addOption(OptionType.USER, "user", "Цель", true),
-                Commands.slash("casino", "Повысить шанс джекпота для себя"),
+                Commands.slash("jackpot", "Повысить шанс джекпота и неудачи для себя"),
                 Commands.slash("slow", "Урезать следующий рост цели")
                     .addOption(OptionType.USER, "user", "Цель", true),
+                Commands.slash("turtle", "Увеличить себе рост бесплатно"),
+                Commands.slash("pray", "Уменьшить себе шанс неудачи"),
+                Commands.slash("transfer", "перевести часть роста другому игроку с комиссией (переводить можно только тем, у кого меньше)")
+                    .addOption(OptionType.USER, "user", "Цель", true)
+                    .addOption(OptionType.NUMBER, "value", "Размер", true),
                 Commands.slash("top", "Показать лидерборд"),
                 Commands.slash("link", "Сгенерировать код привязки или привязать профиль")
                     .addOption(OptionType.STRING, "code", "Код из другого бота", false),
@@ -141,8 +152,11 @@ public class DiscordBot extends ListenerAdapter {
     private String buildSlashResponse(SlashCommandInteractionEvent event) {
         return switch (event.getName()) {
             case "grow" -> buildGrowResponse(event);
-            case "fuck" -> buildJinxResponse(event);
-            case "casino" -> buildJackpotAbilityResponse(event);
+            case "fuck" -> buildFuckResponse(event);
+            case "jackpot" -> buildJackpotAbilityResponse(event);
+            case "turtle" -> buildTurtleResponse(event);
+            case "pray" -> buildPrayResponse(event);
+            case "transfer" -> buildTransferResponse(event);
             case "slow" -> buildSlowResponse(event);
             case "top" -> buildLeaderboardResponse(event);
             case "link" -> buildLinkResponse(event);
@@ -161,7 +175,7 @@ public class DiscordBot extends ListenerAdapter {
         return growService.grow(Platform.DISCORD, event.getUser().getIdLong(), scopeId);
     }
 
-    private String buildJinxResponse(SlashCommandInteractionEvent event) {
+    private String buildFuckResponse(SlashCommandInteractionEvent event) {
         if (!event.isFromGuild()) {
             return "Эта способность доступна только на сервере.";
         }
@@ -172,7 +186,7 @@ public class DiscordBot extends ListenerAdapter {
         }
 
         conversationParticipantService.registerParticipant(Platform.DISCORD, target.getIdLong(), event.getGuild().getIdLong());
-        return abilityService.increaseEnemyFailChance(
+        return abilityService.fuck(
             Platform.DISCORD,
             event.getUser().getIdLong(),
             event.getGuild().getIdLong(),
@@ -191,7 +205,7 @@ public class DiscordBot extends ListenerAdapter {
         }
 
         conversationParticipantService.registerParticipant(Platform.DISCORD, target.getIdLong(), event.getGuild().getIdLong());
-        return abilityService.reduceEnemyGrowth(
+        return abilityService.slow(
             Platform.DISCORD,
             event.getUser().getIdLong(),
             event.getGuild().getIdLong(),
@@ -199,9 +213,40 @@ public class DiscordBot extends ListenerAdapter {
         );
     }
 
+    private String buildTurtleResponse(SlashCommandInteractionEvent event) {
+        return abilityService.turtle(Platform.DISCORD, event.getUser().getIdLong());
+    }
+
+    private String buildPrayResponse(SlashCommandInteractionEvent event) {
+        return abilityService.pray(Platform.DISCORD, event.getUser().getIdLong());
+    }
+
     private String buildJackpotAbilityResponse(SlashCommandInteractionEvent event) {
-        Long scopeId = event.isFromGuild() ? event.getGuild().getIdLong() : null;
-        return abilityService.increaseOwnCritChance(Platform.DISCORD, scopeId, event.getUser().getIdLong());
+        return abilityService.jackpot(Platform.DISCORD, event.getUser().getIdLong());
+    }
+
+    private String buildTransferResponse(SlashCommandInteractionEvent event) {
+        if (!event.isFromGuild()) {
+            return "Эта способность доступна только на сервере.";
+        }
+
+        User target = event.getOption("user", null, OptionMapping::getAsUser);
+        if (target == null) {
+            return "Нужно указать цель.";
+        }
+
+        String value = event.getOption("value", null, OptionMapping::getAsString);
+        if (value == null) {
+            return "Нужно указать размер перевода";
+        }
+        conversationParticipantService.registerParticipant(Platform.DISCORD, target.getIdLong(), event.getGuild().getIdLong());
+        return abilityService.transfer(
+            Platform.DISCORD,
+            event.getUser().getIdLong(),
+            event.getGuild().getIdLong(),
+            target.getIdLong(),
+            value
+        );
     }
 
     private String buildLeaderboardResponse(SlashCommandInteractionEvent event) {
@@ -236,7 +281,7 @@ public class DiscordBot extends ListenerAdapter {
 
     private String formatDiscordTag(net.dv8tion.jda.api.entities.User user) {
         String discriminator = user.getDiscriminator();
-        if (discriminator == null || discriminator.equals("0")) {
+        if (discriminator.equals("0")) {
             return user.getName();
         }
         return user.getName() + "#" + discriminator;

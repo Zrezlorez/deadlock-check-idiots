@@ -99,7 +99,7 @@ public class GrowService {
             double critMultiplier = gameConfigService.getDouble(GameSetting.CRIT_MULTIPLIER);
             growthMultiplier = 1 + (growthMultiplier - 1) * critMultiplier;
         }
-        growthMultiplier = 1 + (growthMultiplier - 1) * (1 - growthContext.growthPenalty());
+        growthMultiplier = 1 + (growthMultiplier - 1) * (1 - growthContext.growthPenalty()) * (1 + growthContext.growthBonus);
 
         double newValue = round(oldValue * growthMultiplier);
         return new GrowthResult(newValue, crit ? Outcome.CRIT : Outcome.NORMAL);
@@ -161,13 +161,15 @@ public class GrowService {
 
     private GrowthContext consumePendingEffects(Player player) {
         GrowthContext context = new GrowthContext(
-            player.getPendingFailChanceBonus(),
+            player.getPendingFailChancePenalty(),
             player.getPendingCritChanceBonus(),
-            player.getPendingGrowthPenalty()
+            player.getPendingGrowthPenalty(),
+            player.getPendingGrowthBonus()
         );
-        player.setPendingFailChanceBonus(0.0);
+        player.setPendingFailChancePenalty(0.0);
         player.setPendingCritChanceBonus(0.0);
         player.setPendingGrowthPenalty(0.0);
+        player.setPendingGrowthBonus(0.0);
         return context;
     }
 
@@ -184,6 +186,6 @@ public class GrowService {
     private record GrowthResult(double newValue, Outcome outcome) {
     }
 
-    private record GrowthContext(double failChanceBonus, double critChanceBonus, double growthPenalty) {
+    private record GrowthContext(double failChanceBonus, double critChanceBonus, double growthPenalty, double growthBonus) {
     }
 }

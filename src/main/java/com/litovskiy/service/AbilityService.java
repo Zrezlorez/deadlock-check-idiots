@@ -2,7 +2,6 @@ package com.litovskiy.service;
 
 import com.litovskiy.dao.ConversationParticipantDao;
 import com.litovskiy.dao.PlayerDao;
-import com.litovskiy.entity.ConversationSettings;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
@@ -15,10 +14,6 @@ import java.time.temporal.ChronoUnit;
 import static com.litovskiy.util.StringUtil.round;
 
 public class AbilityService {
-
-    private static final double MAX_PENDING_FAIL_CHANCE_BONUS = 0.45;
-    private static final double MAX_PENDING_CRIT_CHANCE_BONUS = 0.45;
-    private static final double MAX_PENDING_GROWTH_PENALTY = 0.45;
 
     private final PlayerDao playerDao;
     private final PlayerAccountService playerAccountService;
@@ -47,7 +42,7 @@ public class AbilityService {
         this.clock = clock;
     }
 
-    public String increaseEnemyFailChance(Platform platform, long profileId, Long scopeId, long targetProfileId) {
+    public String fuck(Platform platform, long profileId, Long scopeId, long targetProfileId) {
         if (scopeId == null) {
             return "Эта способность доступна только в беседе или на сервере.";
         }
@@ -65,14 +60,15 @@ public class AbilityService {
         }
 
         double costPercent = gameConfigService.getDouble(GameSetting.ENEMY_FAIL_COST_PERCENT);
-        double failBonus = gameConfigService.getDouble(GameSetting.ENEMY_FAIL_CHANCE_BONUS);
+        double failBonus = gameConfigService.getDouble(GameSetting.ENEMY_FAIL_CHANCE_PENALTY);
+        double maxFailChance = gameConfigService.getDouble(GameSetting.MAX_PENDING_FAIL_CHANCE_PENALTY);
         double cost = round(actor.getSize() * costPercent);
 
         actor.setSize(Math.max(0.0, round(actor.getSize() - cost)));
         actor.setLastAbilityTime(LocalDateTime.now(clock));
-        target.setPendingFailChanceBonus(Math.min(
-            MAX_PENDING_FAIL_CHANCE_BONUS,
-            round(target.getPendingFailChanceBonus() + failBonus)
+        target.setPendingFailChancePenalty(Math.min(
+            maxFailChance,
+            round(target.getPendingFailChancePenalty() + failBonus)
         ));
 
         GrowthStyle growthStyle = conversationStyleService.getStyle(platform, scopeId);
@@ -80,36 +76,10 @@ public class AbilityService {
         playerDao.save(target);
         playerDao.save(actor);
         return "Вы усилили шанс неудачи цели на " + toPercent(failBonus)
-            + " % за " + GrowthStyle.convertValue(cost, growthStyle) + ". Следующая попытка роста у цели будет опаснее.";
+            + "% за " + GrowthStyle.convertValue(cost, growthStyle) + ". Следующая попытка роста у цели будет опаснее.";
     }
 
-    public String increaseOwnCritChance(Platform platform, long scopeId, long profileId) {
-        Player player = playerAccountService.resolveOrCreate(platform, profileId);
-        String cooldownMessage = checkCooldown(player);
-        if (cooldownMessage != null) {
-            return cooldownMessage;
-        }
-
-        double costPercent = gameConfigService.getDouble(GameSetting.SELF_CRIT_COST_PERCENT);
-        double critBonus = gameConfigService.getDouble(GameSetting.SELF_CRIT_CHANCE_BONUS);
-        double cost = round(player.getSize() * costPercent);
-
-        player.setSize(Math.max(0.0, round(player.getSize() - cost)));
-        player.setLastAbilityTime(LocalDateTime.now(clock));
-        player.setPendingCritChanceBonus(Math.min(
-            MAX_PENDING_CRIT_CHANCE_BONUS,
-            round(player.getPendingCritChanceBonus() + critBonus)
-        ));
-
-
-        GrowthStyle growthStyle = conversationStyleService.getStyle(platform, scopeId);
-
-        playerDao.save(player);
-        return "Вы пожертвовали " + GrowthStyle.convertValue(cost, growthStyle) + " и повысили шанс джекпота на " + toPercent(critBonus)
-            + "% для следующего роста.";
-    }
-
-    public String reduceEnemyGrowth(Platform platform, long profileId, Long scopeId, long targetProfileId) {
+    public String slow(Platform platform, long profileId, Long scopeId, long targetProfileId) {
         if (scopeId == null) {
             return "Эта способность доступна только в беседе или на сервере.";
         }
@@ -127,16 +97,140 @@ public class AbilityService {
         }
 
         double growthPenalty = gameConfigService.getDouble(GameSetting.ENEMY_GROWTH_PENALTY);
+        double maxGrowthPenalty = gameConfigService.getDouble(GameSetting.MAX_PENDING_GROWTH_PENALTY);
+
         actor.setLastAbilityTime(LocalDateTime.now(clock));
         target.setPendingGrowthPenalty(Math.min(
-            MAX_PENDING_GROWTH_PENALTY,
+            maxGrowthPenalty,
             round(target.getPendingGrowthPenalty() + growthPenalty)
         ));
 
         playerDao.save(target);
         playerDao.save(actor);
-        return "Вы ослабили следующий рост цели на " + toPercent(growthPenalty) + " %.";
+        return "Вы ослабили следующий рост цели на " + toPercent(growthPenalty) + "%.";
     }
+
+    public String transfer(Platform platform, long profileId, Long scopeId, long targetProfileId, String value) {
+        if (scopeId == null) {
+            return "Эта способность доступна только в беседе или на сервере.";
+        }
+
+        double transferValue;
+        try {
+            transferValue = Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            return "После команды нужно указать число для перевода";
+        }
+
+        Player actor = playerAccountService.resolveOrCreate(platform, profileId);
+        String cooldownMessage = checkCooldown(actor);
+        if (cooldownMessage != null) {
+            return cooldownMessage;
+        }
+
+        Player target = playerAccountService.resolveOrCreate(platform, targetProfileId);
+        String validationMessage = validateTarget(platform, scopeId, actor, target);
+        if (validationMessage != null) {
+            return validationMessage;
+        }
+
+        if (actor.getSize() - 1 < transferValue) {
+            return "Вы не можете перевести больше, чем у вас есть";
+        }
+
+        String name = "камута";
+        if (platform == Platform.TELEGRAM) {
+            name = target.getTelegramDisplayName();
+        } else if (platform == Platform.DISCORD) {
+            name = target.getDiscordTag();
+        }
+
+        double costPercent = gameConfigService.getDouble(GameSetting.ABILITY_TRANSFER_COMMISSION);
+        double cost = round(transferValue * costPercent);
+
+        actor.setSize(Math.max(1.0, round(actor.getSize() - transferValue)));
+        actor.setLastAbilityTime(LocalDateTime.now(clock));
+        target.setSize(Math.min(
+            1.0,
+            round(target.getSize() + transferValue - cost)
+        ));
+
+        GrowthStyle growthStyle = conversationStyleService.getStyle(platform, scopeId);
+
+        playerDao.save(target);
+        playerDao.save(actor);
+        return "Вы перевели " + GrowthStyle.convertValue(transferValue, growthStyle) + " "
+            + name + " с комиссией в размере " + GrowthStyle.convertValue(cost, growthStyle);
+    }
+
+    public String jackpot(Platform platform, long profileId) {
+        Player player = playerAccountService.resolveOrCreate(platform, profileId);
+        String cooldownMessage = checkCooldown(player);
+        if (cooldownMessage != null) {
+            return cooldownMessage;
+        }
+
+        double failBonus = gameConfigService.getDouble(GameSetting.SELF_FAIL_CHANCE_PENALTY);
+        double critBonus = gameConfigService.getDouble(GameSetting.SELF_CRIT_CHANCE_BONUS);
+
+        double maxCritChance = gameConfigService.getDouble(GameSetting.MAX_PENDING_CRIT_CHANCE_BONUS);
+        double maxFailChance = gameConfigService.getDouble(GameSetting.MAX_PENDING_FAIL_CHANCE_PENALTY);
+
+
+        player.setLastAbilityTime(LocalDateTime.now(clock));
+        player.setPendingCritChanceBonus(Math.min(
+            maxCritChance,
+            round(player.getPendingCritChanceBonus() + critBonus)
+        ));
+
+        player.setPendingFailChancePenalty(Math.min(
+            maxFailChance,
+            round(player.getPendingFailChancePenalty() + failBonus)
+        ));
+
+        playerDao.save(player);
+        return "Вы увеличили шанс джекпота на " + toPercent(critBonus) + "% и повысили шанс неудачи на " + toPercent(failBonus)
+            + "% для следующего роста.";
+    }
+
+    public String turtle(Platform platform, long profileId) {
+        Player player = playerAccountService.resolveOrCreate(platform, profileId);
+        String cooldownMessage = checkCooldown(player);
+        if (cooldownMessage != null) {
+            return cooldownMessage;
+        }
+
+        double increaseBonus = gameConfigService.getDouble(GameSetting.SELF_GROWTH_BONUS);
+        double maxGrowthBonus = gameConfigService.getDouble(GameSetting.MAX_PENDING_GROWTH_BONUS);
+
+        player.setLastAbilityTime(LocalDateTime.now(clock));
+        player.setPendingGrowthBonus(Math.min(
+            maxGrowthBonus,
+            round(player.getPendingCritChanceBonus() + increaseBonus)
+        ));
+
+        playerDao.save(player);
+        return "Вы усилили свой следующий рост на " + toPercent(increaseBonus) + "%.";
+    }
+
+    public String pray(Platform platform, long profileId) {
+        Player player = playerAccountService.resolveOrCreate(platform, profileId);
+        String cooldownMessage = checkCooldown(player);
+        if (cooldownMessage != null) {
+            return cooldownMessage;
+        }
+
+        double increaseBonus = gameConfigService.getDouble(GameSetting.SELF_FAIL_BONUS);
+
+        player.setLastAbilityTime(LocalDateTime.now(clock));
+        player.setPendingFailChancePenalty(
+            round(player.getPendingFailChancePenalty() - increaseBonus)
+        );
+
+        playerDao.save(player);
+        return "Вы уменьшили шанс неудачи на " + toPercent(increaseBonus) + "% при следующем росте.";
+    }
+
 
     private String validateTarget(Platform platform, long scopeId, Player actor, Player target) {
         if (actor.getChatId().equals(target.getChatId())) {

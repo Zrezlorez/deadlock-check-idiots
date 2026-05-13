@@ -56,10 +56,14 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     @SneakyThrows
     public static void start(AppServices appServices) {
+        String token = BotConfig.telegramToken();
+        if (token == null || token.isBlank()) {
+            System.out.println("Telegram bot is not enabled because token is empty");
+            return;
+        }
         TgBot tgBot = new TgBot(appServices);
         TelegramBotsLongPollingApplication botsApplication;
         OkHttpClient okHttpClient = HttpClientFactory.create();
-        String token = BotConfig.telegramToken();
 
         tgBot.telegramClient = new OkHttpTelegramClient(okHttpClient, token);
         if (BotConfig.isProxyEnabled()) {
@@ -73,6 +77,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         tgBot.botUsername = me.getUserName();
 
         botsApplication.registerBot(token, tgBot);
+        System.out.println("Telegram bot started");
     }
 
     @Override
@@ -129,11 +134,15 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     private BotReply buildResponse(Update update, String command, String[] commandParts, long chatId, long profileId) {
         return switch (command) {
+            case "/help" -> new BotReply(getHelp(), false);
             case "/grow" -> new BotReply(buildGrowResponse(chatId, profileId), false);
-            case "/fuck" -> new BotReply(buildJinxResponse(update, chatId, profileId), false);
-            case "/jackpot" -> new BotReply(abilityService.increaseOwnCritChance(Platform.TELEGRAM, chatId, profileId), false);
+            case "/fuck" -> new BotReply(buildFuckResponse(update, chatId, profileId), false);
+            case "/jackpot" -> new BotReply(abilityService.jackpot(Platform.TELEGRAM, profileId), false);
             case "/slow" -> new BotReply(buildSlowResponse(update, chatId, profileId), false);
-            case "/top", "/leaderboard" -> new BotReply(buildLeaderboardResponse(chatId, profileId), true);
+            case "/turtle" -> new BotReply(abilityService.turtle(Platform.TELEGRAM, profileId), false);
+            case "/pray" -> new BotReply(abilityService.pray(Platform.TELEGRAM, profileId), false);
+            case "/transfer" -> new BotReply(buildTransferResponse(update, chatId, commandParts, profileId), false);
+            case "/top" -> new BotReply(buildLeaderboardResponse(chatId, profileId), true);
             case "/link" -> new BotReply(buildLinkResponse(commandParts, profileId), false);
             case "/style" -> new BotReply(buildStyleResponse(commandParts, chatId, profileId), false);
             case "/admin" -> new BotReply(adminCommandService.handle(
@@ -145,12 +154,27 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         };
     }
 
+    private String getHelp() {
+        return """
+            /help - список всех команд
+            /grow - вырастить показатель, раз в 8 часов
+            /jackpot - увеличить шанс джекпота и неудачи за процент от своего размера
+            /slow - замедлить рост врага бесплатно
+            /turtle - увеличить себе рост бесплатно
+            /pray - уменьшить себе шанс неудачи
+            /transfer [число] - перевести часть роста другому игроку с комиссией (переводить можно только тем, у кого меньше)
+            /top - увидеть топ игроков в своей беседе (в личных сообщениях - глобальный топ)
+            /link - привязать свой тг/дс (рекомендуется использовать в лс с ботом)
+            /style - изменить стиль роста (только в беседах)
+            """;
+    }
+
     private String buildGrowResponse(long chatId, long profileId) {
         Long scopeId = chatId < 0 ? chatId : null;
         return growService.grow(Platform.TELEGRAM, profileId, scopeId);
     }
 
-    private String buildJinxResponse(Update update, long chatId, long profileId) {
+    private String buildFuckResponse(Update update, long chatId, long profileId) {
         if (chatId >= 0) {
             return "Эта способность доступна только в группах.";
         }
@@ -162,7 +186,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
         playerAccountService.updateTelegramProfile(target.getId(), formatTelegramDisplayName(target), target.getUserName());
         conversationParticipantService.registerParticipant(Platform.TELEGRAM, target.getId(), chatId);
-        return abilityService.increaseEnemyFailChance(Platform.TELEGRAM, profileId, chatId, target.getId());
+        return abilityService.fuck(Platform.TELEGRAM, profileId, chatId, target.getId());
     }
 
     private String buildSlowResponse(Update update, long chatId, long profileId) {
@@ -177,7 +201,26 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
         playerAccountService.updateTelegramProfile(target.getId(), formatTelegramDisplayName(target), target.getUserName());
         conversationParticipantService.registerParticipant(Platform.TELEGRAM, target.getId(), chatId);
-        return abilityService.reduceEnemyGrowth(Platform.TELEGRAM, profileId, chatId, target.getId());
+        return abilityService.slow(Platform.TELEGRAM, profileId, chatId, target.getId());
+    }
+
+    private String buildTransferResponse(Update update, long chatId, String[] commandParts, long profileId) {
+        if (chatId >= 0) {
+            return "Эта способность доступна только в группах.";
+        }
+
+        User target = extractReplyTarget(update);
+        if (target == null) {
+            return "Ответьте этой командой на сообщение цели.";
+        }
+
+        if (commandParts.length < 1) {
+            return "Нужно указать размер перевода";
+        }
+
+        playerAccountService.updateTelegramProfile(target.getId(), formatTelegramDisplayName(target), target.getUserName());
+        conversationParticipantService.registerParticipant(Platform.TELEGRAM, target.getId(), chatId);
+        return abilityService.transfer(Platform.TELEGRAM, profileId, chatId, target.getId(), commandParts[1]);
     }
 
     private String buildLeaderboardResponse(long chatId, long profileId) {
@@ -224,7 +267,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         try {
             telegramClient.execute(builder.build());
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
     }
 
@@ -284,7 +327,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     private String formatTelegramDisplayName(User user) {
         StringBuilder builder = new StringBuilder();
-        if (user.getFirstName() != null && !user.getFirstName().isBlank()) {
+        if (!user.getFirstName().isBlank()) {
             builder.append(user.getFirstName().trim());
         }
         if (user.getLastName() != null && !user.getLastName().isBlank()) {
