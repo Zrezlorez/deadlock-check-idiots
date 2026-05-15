@@ -164,7 +164,8 @@ public class AbilityService {
 
         actor.setSize(Math.max(1.0, round(actor.getSize() - transferValue)));
         actor.setLastAbilityTime(LocalDateTime.now(clock));
-        target.setSize(Math.min(
+
+        target.setSize(Math.max(
             1.0,
             round(target.getSize() + transferValue - cost)
         ));
