@@ -1,37 +1,33 @@
 package com.litovskiy.service;
 
-import com.litovskiy.dao.PlayerDao;
+import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 
+@Service
+@RequiredArgsConstructor
 public class PlayerAccountService {
 
-    private final PlayerDao playerDao;
+    private final PlayerService playerService;
     private final GameConfigService gameConfigService;
 
-    public PlayerAccountService(PlayerDao playerDao, GameConfigService gameConfigService) {
-        this.playerDao = playerDao;
-        this.gameConfigService = gameConfigService;
-    }
-
     public Player resolveOrCreate(Platform platform, long profileId) {
-        Player player = playerDao.findByPlatform(platform, profileId);
+        Player player = playerService.findByPlatform(platform, profileId);
         if (player != null) {
             return player;
         }
 
-        Player legacyPlayer = playerDao.findLegacy(profileId);
-        if (legacyPlayer != null) {
-            platform.setProfileId(legacyPlayer, profileId);
-            playerDao.save(legacyPlayer);
-            return legacyPlayer;
+        Player newPlayer = new Player(gameConfigService.getDouble(GameSetting.START_SIZE));
+        if (platform == Platform.TELEGRAM) {
+            newPlayer.setTelegramChatId(profileId);
+        } else if (platform == Platform.DISCORD) {
+            newPlayer.setDiscordUserId(profileId);
         }
-
-        Player newPlayer = new Player(profileId, gameConfigService.getDouble(GameSetting.START_SIZE));
-        platform.setProfileId(newPlayer, profileId);
-        playerDao.save(newPlayer);
+        playerService.save(newPlayer);
         return newPlayer;
     }
 
@@ -51,7 +47,7 @@ public class PlayerAccountService {
         }
 
         if (changed) {
-            playerDao.save(player);
+            playerService.save(player);
         }
     }
 
@@ -67,7 +63,7 @@ public class PlayerAccountService {
         }
 
         player.setDiscordTag(normalizedDiscordTag);
-        playerDao.save(player);
+        playerService.save(player);
     }
 
     private String normalizeTelegramUsername(String username) {

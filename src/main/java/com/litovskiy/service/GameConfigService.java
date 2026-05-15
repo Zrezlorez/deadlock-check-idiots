@@ -1,19 +1,20 @@
 package com.litovskiy.service;
 
-import com.litovskiy.dao.AppSettingDao;
+import com.litovskiy.repository.AppSettingRepository;
 import com.litovskiy.entity.AppSetting;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-
+@Component
 @RequiredArgsConstructor
 public class GameConfigService {
 
-    private final AppSettingDao appSettingDao;
+    private final AppSettingRepository appSettingRepository;
 
     public double getDouble(GameSetting setting) {
         return Double.parseDouble(getRawValue(setting));
@@ -28,25 +29,25 @@ public class GameConfigService {
     }
 
     public String getRawValue(GameSetting setting) {
-        AppSetting appSetting = appSettingDao.find(setting.getKey());
+        AppSetting appSetting = appSettingRepository.getByKey(setting.getKey());
         return appSetting == null ? setting.getDefaultValue() : appSetting.getValue();
     }
 
     public void set(GameSetting setting, String rawValue) {
         String normalized = setting.normalize(rawValue);
-        appSettingDao.save(new AppSetting(setting.getKey(), normalized));
+        appSettingRepository.save(new AppSetting(setting.getKey(), normalized));
     }
 
     public void reset(GameSetting setting) {
-        AppSetting appSetting = appSettingDao.find(setting.getKey());
+        AppSetting appSetting = appSettingRepository.getByKey(setting.getKey());
         if (appSetting != null) {
-            appSettingDao.delete(appSetting);
+            appSettingRepository.delete(appSetting);
         }
     }
 
     public Map<GameSetting, String> listEffectiveValues() {
         Map<GameSetting, String> result = new LinkedHashMap<>();
-        Map<String, String> storedMap = toValueMap(appSettingDao.findAll());
+        Map<String, String> storedMap = toValueMap(appSettingRepository.findAll());
 
         for (GameSetting setting : GameSetting.values()) {
             result.put(setting, storedMap.getOrDefault(setting.getKey(), setting.getDefaultValue()));

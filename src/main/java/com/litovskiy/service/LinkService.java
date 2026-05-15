@@ -1,59 +1,49 @@
 package com.litovskiy.service;
 
-import com.litovskiy.dao.LinkCodeDao;
-import com.litovskiy.dao.PlayerDao;
+import com.litovskiy.repository.LinkCodeRepository;
+import com.litovskiy.service.data.ActivityStatService;
+import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.LinkCode;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+@Service
+@RequiredArgsConstructor
 public class LinkService {
 
-    private static final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ123456789";
-
-    private final PlayerDao playerDao;
-    private final LinkCodeDao linkCodeDao;
+    private final PlayerService playerService;
+    private final LinkCodeRepository linkCodeRepository;
     private final PlayerAccountService playerAccountService;
-    private final SecureRandom random;
+    private final ActivityStatService activityStatService;
+
+    private final SecureRandom random = new SecureRandom();
+    private final String CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ123456789";
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-
-    public LinkService(PlayerDao playerDao,
-                       LinkCodeDao linkCodeDao,
-                       PlayerAccountService playerAccountService) {
-        this(playerDao, linkCodeDao, playerAccountService, new SecureRandom());
-    }
-
-    public LinkService(PlayerDao playerDao,
-                       LinkCodeDao linkCodeDao,
-                       PlayerAccountService playerAccountService,
-                       SecureRandom random) {
-        this.playerDao = playerDao;
-        this.linkCodeDao = linkCodeDao;
-        this.playerAccountService = playerAccountService;
-        this.random = random;
-    }
 
     public String createCode(Platform platform, long profileId) {
         Player player = playerAccountService.resolveOrCreate(platform, profileId);
         int minutes = 10;
         LocalDateTime now = LocalDateTime.now();
 
-        linkCodeDao.deleteExpired(now);
-        LinkCode existingCode = linkCodeDao.findByPlayerChatId(player.getChatId());
+        linkCodeRepository.deleteLinkCodesByExpiresAtBefore(now);
+        LinkCode existingCode = linkCodeRepository.findByPlayerId(player.getId());
         if (existingCode != null) {
             return formatLinkCodeMessage(existingCode, true);
         }
 
         LinkCode linkCode = new LinkCode(
             nextCode(),
-            player.getChatId(),
+            player.getId(),
             platform,
             now.plusMinutes(minutes)
         );
-        linkCodeDao.save(linkCode);
+        linkCodeRepository.save(linkCode);
 
         return formatLinkCodeMessage(linkCode, false);
     }
@@ -62,8 +52,8 @@ public class LinkService {
         String code = normalizeCode(rawCode);
         LocalDateTime now = LocalDateTime.now();
 
-        linkCodeDao.deleteExpired(now);
-        LinkCode linkCode = linkCodeDao.findByCode(code);
+        linkCodeRepository.deleteLinkCodesByExpiresAtBefore(now);
+        LinkCode linkCode = linkCodeRepository.findByCode(code);
         if (linkCode == null) {
             return "Код привязки не найден или уже истек.";
         }
@@ -72,15 +62,15 @@ public class LinkService {
             return "Этот код нужно вводить в другом боте.";
         }
 
-        Player currentPlayer = playerAccountService.resolveOrCreate(platform, profileId);
-        Player targetPlayer = playerDao.find(linkCode.getPlayerChatId());
-        if (targetPlayer == null) {
-            linkCodeDao.delete(linkCode);
+        Player currentPlayer = playerService.findById(linkCode.getPlayerId());
+        Player targetPlayer = playerAccountService.resolveOrCreate(platform, profileId);
+        if (currentPlayer == null) {
+            linkCodeRepository.delete(linkCode);
             return "Аккаунт для привязки не найден. Сгенерируйте новый код.";
         }
 
-        if (currentPlayer.getChatId().equals(targetPlayer.getChatId())) {
-            linkCodeDao.delete(linkCode);
+        if (currentPlayer.getId().equals(targetPlayer.getId())) {
+            linkCodeRepository.delete(linkCode);
             return "Этот профиль уже привязан к тому же аккаунту.";
         }
 
@@ -89,47 +79,12 @@ public class LinkService {
             return conflictMessage;
         }
 
-        mergePlayers(targetPlayer, currentPlayer);
-        playerDao.mergeAndDeleteSource(targetPlayer, currentPlayer);
+        currentPlayer.setDiscordUserId(targetPlayer.getDiscordUserId());
 
-        linkCodeDao.delete(linkCode);
+        playerService.delete(targetPlayer);
+        activityStatService.deleteByPlayerId(targetPlayer.getId());
+        linkCodeRepository.delete(linkCode);
         return "Профили объединены. Теперь Telegram и Discord используют один аккаунт.";
-    }
-
-    private void mergePlayers(Player targetPlayer, Player sourcePlayer) {
-        targetPlayer.setSize(Math.max(targetPlayer.getSize(), sourcePlayer.getSize()));
-
-        LocalDateTime targetGrowTime = targetPlayer.getLastGrowTime();
-        LocalDateTime sourceGrowTime = sourcePlayer.getLastGrowTime();
-        if (sourceGrowTime != null && (targetGrowTime == null || sourceGrowTime.isAfter(targetGrowTime))) {
-            targetPlayer.setLastGrowTime(sourceGrowTime);
-        }
-
-        LocalDateTime targetAbilityTime = targetPlayer.getLastAbilityTime();
-        LocalDateTime sourceAbilityTime = sourcePlayer.getLastAbilityTime();
-        if (sourceAbilityTime != null && (targetAbilityTime == null || sourceAbilityTime.isAfter(targetAbilityTime))) {
-            targetPlayer.setLastAbilityTime(sourceAbilityTime);
-        }
-
-        targetPlayer.setPendingFailChancePenalty(Math.max(
-            targetPlayer.getPendingFailChancePenalty(),
-            sourcePlayer.getPendingFailChancePenalty()
-        ));
-        targetPlayer.setPendingCritChanceBonus(Math.max(
-            targetPlayer.getPendingCritChanceBonus(),
-            sourcePlayer.getPendingCritChanceBonus()
-        ));
-        targetPlayer.setPendingGrowthPenalty(Math.max(
-            targetPlayer.getPendingGrowthPenalty(),
-            sourcePlayer.getPendingGrowthPenalty()
-        ));
-
-        if (targetPlayer.getTelegramChatId() == null) {
-            targetPlayer.setTelegramChatId(sourcePlayer.getTelegramChatId());
-        }
-        if (targetPlayer.getDiscordUserId() == null) {
-            targetPlayer.setDiscordUserId(sourcePlayer.getDiscordUserId());
-        }
     }
 
     private String getConflictMessage(Player currentPlayer, Player targetPlayer, Platform currentPlatform, long profileId) {
@@ -140,7 +95,7 @@ public class LinkService {
 
         if (hasConflict(targetPlayer.getTelegramChatId(), currentPlayer.getTelegramChatId())
             || hasConflict(targetPlayer.getDiscordUserId(), currentPlayer.getDiscordUserId())) {
-            return "Оба аккаунта уже привязаны к разным профилям. Такое объединение нужно разруливать вручную.";
+            return "Оба аккаунта уже привязаны к разным профилям. Такое объединение нужно разруливать вручную. Обратитесь к администратору - @zrezlorez";
         }
 
         return null;
@@ -166,7 +121,8 @@ public class LinkService {
     private String formatLinkCodeMessage(LinkCode linkCode, boolean existing) {
         String prefix = existing ? "У вас уже есть активный код привязки." : "Код привязки создан.";
         return String.format(
-            "%s%nКод привязки: %s%nОтправьте его в другом боте командой /link %s%nКод действует до %s",
+            "%s%nКод привязки: %s%nОтправьте его в другом боте командой /link %s%nКод действует до %s " +
+                "\n Обратите внимание! Аккаунт, который находится на платформе, где вы вводите код, будет удален",
             prefix,
             linkCode.getCode(),
             linkCode.getCode(),

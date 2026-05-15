@@ -1,30 +1,29 @@
 package com.litovskiy.service;
 
-import com.litovskiy.dao.ConversationSettingsDao;
+import com.litovskiy.repository.ConversationSettingsRepository;
 import com.litovskiy.entity.ConversationSettings;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
+@Service
+@RequiredArgsConstructor
 public class ConversationStyleService {
 
-    private final ConversationSettingsDao conversationSettingsDao;
-
-    public ConversationStyleService(ConversationSettingsDao conversationSettingsDao) {
-        this.conversationSettingsDao = conversationSettingsDao;
-    }
+    private final ConversationSettingsRepository conversationSettingsRepository;
 
     public void registerTelegramManager(long scopeId, long managerProfileId) {
         ConversationSettings settings = getOrCreate(Platform.TELEGRAM, scopeId);
         settings.setManagerProfileId(managerProfileId);
-        conversationSettingsDao.save(settings);
+        conversationSettingsRepository.save(settings);
     }
 
     public GrowthStyle getStyle(Platform platform, Long scopeId) {
         if (scopeId == null) {
             return GrowthStyle.DICK;
         }
-
-        ConversationSettings settings = conversationSettingsDao.findByScope(platform, scopeId);
+        ConversationSettings settings = conversationSettingsRepository.findByPlatformAndScopeId(platform, scopeId);
         return settings == null ? GrowthStyle.DICK : settings.getGrowthStyle();
     }
 
@@ -50,7 +49,7 @@ public class ConversationStyleService {
         }
 
         settings.setGrowthStyle(style);
-        conversationSettingsDao.save(settings);
+        conversationSettingsRepository.save(settings);
         return "Стиль группы изменен: " + style.getDisplayName() + ".";
     }
 
@@ -62,12 +61,12 @@ public class ConversationStyleService {
 
         ConversationSettings settings = getOrCreate(Platform.DISCORD, scopeId);
         settings.setGrowthStyle(style);
-        conversationSettingsDao.save(settings);
+        conversationSettingsRepository.save(settings);
         return "Стиль сервера изменен: " + style.getDisplayName() + ".";
     }
 
     private ConversationSettings getOrCreate(Platform platform, long scopeId) {
-        ConversationSettings settings = conversationSettingsDao.findByScope(platform, scopeId);
+        ConversationSettings settings = conversationSettingsRepository.findByPlatformAndScopeId(platform, scopeId);
         return settings == null ? new ConversationSettings(platform, scopeId) : settings;
     }
 }

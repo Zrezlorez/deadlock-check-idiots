@@ -1,21 +1,18 @@
 package com.litovskiy.service;
 
 import com.litovskiy.entity.Platform;
-import com.litovskiy.util.PropsManager;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
 import java.util.Set;
-import java.util.stream.Collectors;
 
+@Component
 public class AdminAccessService {
 
-    private final Set<Long> telegramAdminIds;
-    private final Set<Long> discordAdminIds;
-
-    public AdminAccessService() {
-        this.telegramAdminIds = parseIds(PropsManager.getProps().getProperty("admin.telegramUserIds", ""));
-        this.discordAdminIds = parseIds(PropsManager.getProps().getProperty("admin.discordUserIds", ""));
-    }
+    @Value("${admin.telegramUserIds}")
+    private Set<Long> telegramAdminIds;
+    @Value("${admin.discordUserIds}")
+    private Set<Long> discordAdminIds;
 
     public boolean isAdmin(Platform platform, long profileId) {
         return switch (platform) {
@@ -26,13 +23,5 @@ public class AdminAccessService {
 
     public String describeConfiguration() {
         return "Куда мы лезем?";
-    }
-
-    private Set<Long> parseIds(String rawValue) {
-        return Arrays.stream(rawValue.split(","))
-            .map(String::trim)
-            .filter(value -> !value.isEmpty())
-            .map(Long::parseLong)
-            .collect(Collectors.toSet());
     }
 }

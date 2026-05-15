@@ -3,15 +3,48 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: dick-game-bot
+    container_name: grow-game-bot
     restart: unless-stopped
     init: true
-    environment:
-      TZ: Europe/Moscow
-    volumes:
-      - ./application.properties:/app/config/application.properties:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - bot-network
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
+
+  postgres:
+    image: postgres:16
+    container_name: grow-game-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - bot-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+
+networks:
+  bot-network:
+    driver: bridge
