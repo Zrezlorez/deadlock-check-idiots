@@ -2,6 +2,8 @@ package com.litovskiy.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -25,8 +27,8 @@ import java.time.LocalDateTime;
 public class Player {
 
     @Id
-    @Column(name = "chat_id")
-    private Long chatId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(name = "size")
     private double size;
@@ -64,8 +66,7 @@ public class Player {
     @Column(name = "pending_growth_bonus", nullable = false, columnDefinition = "double precision default 0")
     private double pendingGrowthBonus;
 
-    public Player(Long chatId, double size) {
-        this.chatId = chatId;
+    public Player(double size) {
         this.size = size;
         this.lastGrowTime = null;
         this.lastAbilityTime = null;

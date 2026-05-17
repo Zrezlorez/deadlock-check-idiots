@@ -19,7 +19,7 @@ import lombok.Setter;
     uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_conversation_participants_player_platform_scope",
-            columnNames = {"player_chat_id", "platform", "scope_id"}
+            columnNames = {"player_id", "platform", "scope_id"}
         )
     }
 )
@@ -32,8 +32,8 @@ public class ConversationParticipant {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "player_chat_id", nullable = false)
-    private Long playerChatId;
+    @Column(name = "player_id", nullable = false)
+    private Long playerId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "platform", nullable = false, length = 16)
@@ -42,8 +42,8 @@ public class ConversationParticipant {
     @Column(name = "scope_id", nullable = false)
     private Long scopeId;
 
-    public ConversationParticipant(Long playerChatId, Platform platform, Long scopeId) {
-        this.playerChatId = playerChatId;
+    public ConversationParticipant(Long playerId, Platform platform, Long scopeId) {
+        this.playerId = playerId;
         this.platform = platform;
         this.scopeId = scopeId;
     }

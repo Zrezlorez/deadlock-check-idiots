@@ -21,7 +21,7 @@ import java.time.LocalDate;
     uniqueConstraints = {
         @UniqueConstraint(
             name = "uk_activity_stats_player_platform_scope_date",
-            columnNames = {"player_chat_id", "platform", "scope_id", "activity_date"}
+            columnNames = {"player_id", "platform", "scope_id", "activity_date"}
         )
     }
 )
@@ -34,8 +34,8 @@ public class ActivityStat {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "player_chat_id", nullable = false)
-    private Long playerChatId;
+    @Column(name = "player_id", nullable = false)
+    private Long playerId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "platform", nullable = false, length = 16)
@@ -53,8 +53,8 @@ public class ActivityStat {
     @Column(name = "voice_seconds", nullable = false)
     private long voiceSeconds;
 
-    public ActivityStat(Long playerChatId, Platform platform, Long scopeId, LocalDate activityDate) {
-        this.playerChatId = playerChatId;
+    public ActivityStat(Long playerId, Platform platform, Long scopeId, LocalDate activityDate, long messageCount, long voiceSeconds) {
+        this.playerId = playerId;
         this.platform = platform;
         this.scopeId = scopeId;
         this.activityDate = activityDate;

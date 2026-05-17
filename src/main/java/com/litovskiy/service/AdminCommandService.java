@@ -1,27 +1,23 @@
 package com.litovskiy.service;
 
-import com.litovskiy.dao.PlayerDao;
+import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Map;
 
+@Service
+@RequiredArgsConstructor
 public class AdminCommandService {
 
     private final AdminAccessService adminAccessService;
     private final GameConfigService gameConfigService;
-    private final PlayerDao playerDao;
-
-    public AdminCommandService(AdminAccessService adminAccessService,
-                               GameConfigService gameConfigService,
-                               PlayerDao playerDao) {
-        this.adminAccessService = adminAccessService;
-        this.gameConfigService = gameConfigService;
-        this.playerDao = playerDao;
-    }
+    private final PlayerService playerDao;
 
     public String handle(Platform requesterPlatform, long requesterProfileId, String rawCommand) {
         if (!adminAccessService.isAdmin(requesterPlatform, requesterProfileId)) {
@@ -176,7 +172,7 @@ public class AdminCommandService {
         return "Игрок найден:\n"
             + "platform = " + platform.displayName() + "\n"
             + "identifier = " + identifier + "\n"
-            + "playerChatId = " + player.getChatId() + "\n"
+            + "playerChatId = " + player.getId() + "\n"
             + "size = " + player.getSize() + "\n"
             + "lastGrowTime = " + player.getLastGrowTime() + "\n"
             + "telegramChatId = " + player.getTelegramChatId() + "\n"

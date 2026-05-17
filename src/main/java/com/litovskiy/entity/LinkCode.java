@@ -28,8 +28,8 @@ public class LinkCode {
     @Column(name = "code", nullable = false, unique = true, length = 16)
     private String code;
 
-    @Column(name = "player_chat_id", nullable = false)
-    private Long playerChatId;
+    @Column(name = "player_id", nullable = false)
+    private Long playerId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "source_platform", nullable = false, length = 16)
@@ -38,9 +38,9 @@ public class LinkCode {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
-    public LinkCode(String code, Long playerChatId, Platform sourcePlatform, LocalDateTime expiresAt) {
+    public LinkCode(String code, Long playerId, Platform sourcePlatform, LocalDateTime expiresAt) {
         this.code = code;
-        this.playerChatId = playerChatId;
+        this.playerId = playerId;
         this.sourcePlatform = sourcePlatform;
         this.expiresAt = expiresAt;
     }

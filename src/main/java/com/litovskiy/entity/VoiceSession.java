@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @Table(
     name = "voice_sessions",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uk_voice_sessions_player_platform", columnNames = {"player_chat_id", "platform"})
+        @UniqueConstraint(name = "uk_voice_sessions_player_platform", columnNames = {"player_id", "platform"})
     }
 )
 @Getter
@@ -31,8 +31,8 @@ public class VoiceSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "player_chat_id", nullable = false)
-    private Long playerChatId;
+    @Column(name = "player_id", nullable = false)
+    private Long playerId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "platform", nullable = false, length = 16)
@@ -44,8 +44,8 @@ public class VoiceSession {
     @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
 
-    public VoiceSession(Long playerChatId, Platform platform, Long scopeId, LocalDateTime startedAt) {
-        this.playerChatId = playerChatId;
+    public VoiceSession(Long playerId, Platform platform, Long scopeId, LocalDateTime startedAt) {
+        this.playerId = playerId;
         this.platform = platform;
         this.scopeId = scopeId;
         this.startedAt = startedAt;

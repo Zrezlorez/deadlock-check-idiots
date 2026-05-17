@@ -1,9 +1,12 @@
 package com.litovskiy.service;
 
-import com.litovskiy.dao.PlayerDao;
+import com.litovskiy.service.activity.ActivityService;
+import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -13,36 +16,16 @@ import java.util.Random;
 import static com.litovskiy.entity.GrowthStyle.convertValue;
 import static com.litovskiy.util.StringUtil.round;
 
+@Service
+@RequiredArgsConstructor
 public class GrowService {
 
-    private final PlayerDao playerDao;
+    private final PlayerService playerDao;
     private final PlayerAccountService playerAccountService;
     private final ActivityService activityService;
     private final ConversationStyleService conversationStyleService;
     private final GameConfigService gameConfigService;
     private final Random random;
-
-    public GrowService(PlayerDao playerDao,
-                       PlayerAccountService playerAccountService,
-                       ActivityService activityService,
-                       ConversationStyleService conversationStyleService,
-                       GameConfigService gameConfigService) {
-        this(playerDao, playerAccountService, activityService, conversationStyleService, gameConfigService, new Random());
-    }
-
-    public GrowService(PlayerDao playerDao,
-                       PlayerAccountService playerAccountService,
-                       ActivityService activityService,
-                       ConversationStyleService conversationStyleService,
-                       GameConfigService gameConfigService,
-                       Random random) {
-        this.playerDao = playerDao;
-        this.playerAccountService = playerAccountService;
-        this.activityService = activityService;
-        this.conversationStyleService = conversationStyleService;
-        this.gameConfigService = gameConfigService;
-        this.random = random;
-    }
 
     public String grow(Platform platform, long profileId, Long scopeId) {
         LocalDateTime now = LocalDateTime.now();

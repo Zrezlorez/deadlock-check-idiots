@@ -1,10 +1,12 @@
 package com.litovskiy.service;
 
-import com.litovskiy.dao.ConversationParticipantDao;
-import com.litovskiy.dao.PlayerDao;
+import com.litovskiy.repository.ConversationParticipantRepository;
+import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -13,34 +15,17 @@ import java.time.temporal.ChronoUnit;
 
 import static com.litovskiy.util.StringUtil.round;
 
+@Component
+@RequiredArgsConstructor
 public class AbilityService {
 
-    private final PlayerDao playerDao;
+    private final PlayerService playerDao;
     private final PlayerAccountService playerAccountService;
-    private final ConversationParticipantDao conversationParticipantDao;
+    private final ConversationParticipantRepository conversationParticipantRepository;
     private final GameConfigService gameConfigService;
     private final ConversationStyleService conversationStyleService;
     private final Clock clock;
 
-    public AbilityService(PlayerDao playerDao,
-                          PlayerAccountService playerAccountService,
-                          ConversationParticipantDao conversationParticipantDao,
-                          GameConfigService gameConfigService, ConversationStyleService conversationStyleService) {
-        this(playerDao, playerAccountService, conversationParticipantDao, gameConfigService, conversationStyleService, Clock.systemDefaultZone());
-    }
-
-    public AbilityService(PlayerDao playerDao,
-                          PlayerAccountService playerAccountService,
-                          ConversationParticipantDao conversationParticipantDao,
-                          GameConfigService gameConfigService, ConversationStyleService conversationStyleService,
-                          Clock clock) {
-        this.playerDao = playerDao;
-        this.playerAccountService = playerAccountService;
-        this.conversationParticipantDao = conversationParticipantDao;
-        this.gameConfigService = gameConfigService;
-        this.conversationStyleService = conversationStyleService;
-        this.clock = clock;
-    }
 
     public String fuck(Platform platform, long profileId, Long scopeId, long targetProfileId) {
         if (scopeId == null) {
@@ -248,11 +233,11 @@ public class AbilityService {
 
 
     private String validateTarget(Platform platform, long scopeId, Player actor, Player target) {
-        if (actor.getChatId().equals(target.getChatId())) {
+        if (actor.getId().equals(target.getId())) {
             return "Нельзя использовать эту способность на себе.";
         }
 
-        if (!conversationParticipantDao.exists(target.getChatId(), platform, scopeId)) {
+        if (!conversationParticipantRepository.existsByPlayerIdAndPlatformAndScopeId(target.getId(), platform, scopeId)) {
             return "Цель не найдена в этой беседе.";
         }
 

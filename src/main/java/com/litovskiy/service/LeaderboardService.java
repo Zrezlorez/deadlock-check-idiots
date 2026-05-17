@@ -1,10 +1,12 @@
 package com.litovskiy.service;
 
-import com.litovskiy.dao.ConversationParticipantDao;
-import com.litovskiy.dao.PlayerDao;
+import com.litovskiy.repository.ConversationParticipantRepository;
+import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.List;
@@ -13,22 +15,15 @@ import java.util.Objects;
 import static com.litovskiy.entity.GrowthStyle.convertValue;
 import static com.litovskiy.util.StringUtil.escapeHtml;
 
+@Service
+@RequiredArgsConstructor
 public class LeaderboardService {
 
-    private final PlayerDao playerDao;
-    private final ConversationParticipantDao conversationParticipantDao;
+    private final PlayerService playerDao;
+    private final ConversationParticipantRepository conversationParticipantRepository;
     private final ConversationStyleService conversationStyleService;
     private final GameConfigService gameConfigService;
 
-    public LeaderboardService(PlayerDao playerDao,
-                              ConversationParticipantDao conversationParticipantDao,
-                              ConversationStyleService conversationStyleService,
-                              GameConfigService gameConfigService) {
-        this.playerDao = playerDao;
-        this.conversationParticipantDao = conversationParticipantDao;
-        this.conversationStyleService = conversationStyleService;
-        this.gameConfigService = gameConfigService;
-    }
 
     public String buildLeaderboard(Platform platform, long requesterProfileId, Long scopeId) {
         int limit = gameConfigService.getInt(GameSetting.LEADERBOARD_LIMIT);
@@ -68,8 +63,8 @@ public class LeaderboardService {
     }
 
     private List<Player> findScopeLeaderboard(Platform platform, long scopeId) {
-        List<Long> participantIds = conversationParticipantDao.findParticipantIds(platform, scopeId);
-        return playerDao.findByChatIds(participantIds).stream()
+        List<Long> participantIds = conversationParticipantRepository.findByPlatformAndScopeId(platform, scopeId);
+        return playerDao.findByIds(participantIds).stream()
             .filter(player -> platform.getProfileId(player) != null)
             .sorted(Comparator.comparingDouble(Player::getSize).reversed())
             .toList();
@@ -94,7 +89,7 @@ public class LeaderboardService {
     private String formatPlayer(Platform platform, Player player, Long scopeId) {
         Long profileId = platform.getProfileId(player);
         if (profileId == null) {
-            return "аккаунт " + player.getChatId();
+            return "аккаунт " + player.getId();
         }
 
         return switch (platform) {
