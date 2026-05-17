@@ -80,19 +80,32 @@ public interface ActivityStatRepository extends JpaRepository<ActivityStat, Long
     );
 
     @Modifying
-    @Query("""
-    update ActivityStat a
-    set a.messageCount = a.messageCount + :amount
-    where a.playerId = :playerId
-      and a.platform = :platform
-      and a.scopeId = :scopeId
-      and a.activityDate = :activityDate
-""")
-    int incrementMessages(
-        @Param("amount") long amount,
+    @Query(value = """
+    INSERT INTO activity_stats (
+        player_id,
+        platform,
+        scope_id,
+        activity_date,
+        message_count,
+        voice_seconds
+    )
+    VALUES (
+        :playerId,
+        :platform,
+        :scopeId,
+        :activityDate,
+        :amount,
+        0
+    )
+    ON CONFLICT (player_id, platform, scope_id, activity_date)
+    DO UPDATE SET
+        message_count = activity_stats.message_count + EXCLUDED.message_count
+    """, nativeQuery = true)
+    void incrementMessages(
+        @Param("playerId") long playerId,
         @Param("platform") Platform platform,
         @Param("scopeId") long scopeId,
         @Param("activityDate") LocalDate activityDate,
-        @Param("playerId") long playerId
+        @Param("amount") long amount
     );
 }

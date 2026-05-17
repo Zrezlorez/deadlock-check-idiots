@@ -5,7 +5,6 @@ import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.PlayerTotalProjection;
 import com.litovskiy.repository.ActivityStatRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
@@ -26,15 +25,7 @@ public class ActivityStatService {
 
     @Transactional
     public void incrementMessages(long playerId, Platform platform, long scopeId, LocalDate date, long amount) {
-        int updated = repository.incrementMessages(playerId, platform, scopeId, date, amount);
-
-        if (updated == 0) {
-            try {
-                repository.save(new ActivityStat(playerId, platform, scopeId, date, amount, 0));
-            } catch (DataIntegrityViolationException ignored) {
-                repository.incrementMessages(playerId, platform, scopeId, date, amount);
-            }
-        }
+        repository.incrementMessages(playerId, platform, scopeId, date, amount);
     }
 
     @Transactional
