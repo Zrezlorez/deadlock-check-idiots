@@ -119,6 +119,20 @@ public class AbilityService {
             return validationMessage;
         }
 
+        GrowthStyle growthStyle = conversationStyleService.getStyle(platform, scopeId);
+
+        if (transferValue < 0) {
+            double diff = actor.getSize() * 0.05;
+            actor.setLastAbilityTime(LocalDateTime.now(clock));
+            actor.setSize(Math.min(
+                1.0,
+                round(actor.getSize() - diff)
+            ));
+            return "Вы обвиняетесь в подрыве государственного строя. " +
+                "В качестве меры наказания к вам будет применен уголовный штраф в размере 5% от текущего роста. " +
+                "Ваш рост уменьшен на " + GrowthStyle.convertValue(diff, growthStyle) + ".";
+        }
+
         if (actor.getSize() - 1 < transferValue) {
             return "Вы не можете перевести больше, чем у вас есть";
         }
@@ -135,12 +149,13 @@ public class AbilityService {
 
         actor.setSize(Math.max(1.0, round(actor.getSize() - transferValue)));
         actor.setLastAbilityTime(LocalDateTime.now(clock));
-        target.setSize(Math.min(
+
+        target.setSize(Math.max(
             1.0,
             round(target.getSize() + transferValue - cost)
         ));
 
-        GrowthStyle growthStyle = conversationStyleService.getStyle(platform, scopeId);
+
 
         playerDao.save(target);
         playerDao.save(actor);
