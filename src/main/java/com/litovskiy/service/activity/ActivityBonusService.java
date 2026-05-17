@@ -5,7 +5,7 @@ import com.litovskiy.entity.Player;
 import com.litovskiy.entity.VoiceSession;
 import com.litovskiy.repository.VoiceSessionRepository;
 import com.litovskiy.service.GameConfigService;
-import com.litovskiy.service.GameSetting;
+import com.litovskiy.util.GameSetting;
 import com.litovskiy.service.PlayerAccountService;
 import com.litovskiy.service.data.ActivityStatService;
 import lombok.RequiredArgsConstructor;

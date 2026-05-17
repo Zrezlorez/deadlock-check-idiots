@@ -1,4 +1,4 @@
-package com.litovskiy.entity;
+package com.litovskiy.util;
 
 public interface PlayerTotalProjection {
     Long getPlayerId();
