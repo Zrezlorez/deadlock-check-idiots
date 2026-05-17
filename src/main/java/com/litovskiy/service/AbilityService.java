@@ -137,7 +137,7 @@ public class AbilityService {
         GrowthStyle growthStyle = conversationStyleService.getStyle(platform, scopeId);
 
         if (transferValue < 0) {
-            double diff = actor.getSize() * 0.5;
+            double diff = actor.getSize() * 0.05;
             actor.setLastAbilityTime(LocalDateTime.now(clock));
             actor.setSize(Math.min(
                 1.0,
