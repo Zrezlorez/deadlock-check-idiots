@@ -7,7 +7,7 @@ import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.GrowService;
 import com.litovskiy.service.LeaderboardService;
 import com.litovskiy.service.PlayerAccountService;
-import com.litovskiy.service.link.LinkService;
+import com.litovskiy.service.LinkService;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
