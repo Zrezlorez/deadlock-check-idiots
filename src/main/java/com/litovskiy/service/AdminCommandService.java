@@ -95,7 +95,7 @@ public class AdminCommandService {
             return "Неизвестная платформа. Используйте telegram или discord.";
         }
 
-        String identifier = parts[3];
+        String identifier = parts[3].toLowerCase();
         Player player = resolvePlayer(targetPlatform, identifier);
         if (player == null) {
             return "Игрок не найден.";
@@ -107,6 +107,8 @@ public class AdminCommandService {
             case "add-size" -> updatePlayerSize(player, parts, false);
             case "reset-cooldown" -> resetCooldown(player);
             case "set-last-grow" -> setLastGrow(player, parts);
+            case "reset-ability" -> resetAbilityCooldown(player);
+            case "set-last-ability" -> setLastAbility(player, parts);
             default -> "Неизвестная команда игрока.";
         };
     }
@@ -148,6 +150,12 @@ public class AdminCommandService {
         return "Кулдаун игрока сброшен.";
     }
 
+    private String resetAbilityCooldown(Player player) {
+        player.setLastAbilityTime(null);
+        playerDao.save(player);
+        return "Кулдаун способностей игрока сброшен.";
+    }
+
     private String setLastGrow(Player player, String[] parts) {
         if (parts.length < 5) {
             return "Нужно указать время в формате yyyy-MM-ddTHH:mm:ss или none.";
@@ -161,6 +169,26 @@ public class AdminCommandService {
 
         try {
             player.setLastGrowTime(LocalDateTime.parse(parts[4]));
+            playerDao.save(player);
+            return "lastGrowTime обновлен: " + player.getLastGrowTime();
+        } catch (DateTimeParseException e) {
+            return "Неверный формат времени. Используйте yyyy-MM-ddTHH:mm:ss";
+        }
+    }
+
+    private String setLastAbility(Player player, String[] parts) {
+        if (parts.length < 5) {
+            return "Нужно указать время в формате yyyy-MM-ddTHH:mm:ss или none.";
+        }
+
+        if ("none".equalsIgnoreCase(parts[4])) {
+            player.setLastAbilityTime(null);
+            playerDao.save(player);
+            return "lastGrowTime очищен.";
+        }
+
+        try {
+            player.setLastAbilityTime(LocalDateTime.parse(parts[4]));
             playerDao.save(player);
             return "lastGrowTime обновлен: " + player.getLastGrowTime();
         } catch (DateTimeParseException e) {
