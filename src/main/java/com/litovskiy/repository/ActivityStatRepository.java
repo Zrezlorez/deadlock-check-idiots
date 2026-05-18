@@ -103,7 +103,7 @@ public interface ActivityStatRepository extends JpaRepository<ActivityStat, Long
     """, nativeQuery = true)
     void incrementMessages(
         @Param("playerId") long playerId,
-        @Param("platform") Platform platform,
+        @Param("platform") String platform,
         @Param("scopeId") long scopeId,
         @Param("activityDate") LocalDate activityDate,
         @Param("amount") long amount

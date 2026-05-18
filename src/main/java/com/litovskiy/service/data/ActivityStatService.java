@@ -25,7 +25,7 @@ public class ActivityStatService {
 
     @Transactional
     public void incrementMessages(long playerId, Platform platform, long scopeId, LocalDate date, long amount) {
-        repository.incrementMessages(playerId, platform, scopeId, date, amount);
+        repository.incrementMessages(playerId, platform.name(), scopeId, date, amount);
     }
 
     @Transactional
