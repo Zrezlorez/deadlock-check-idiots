@@ -10,10 +10,12 @@ import com.litovskiy.service.PlayerAccountService;
 import com.litovskiy.service.LinkService;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TgResponseBuilder {

@@ -4,11 +4,13 @@ import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class PlayerAccountService {
 
@@ -49,6 +51,7 @@ public class PlayerAccountService {
         if (changed) {
             playerService.save(player);
         }
+        log.info("Update telegram profile for player {}", player);
     }
 
     public void updateDiscordTag(long profileId, String discordTag) {

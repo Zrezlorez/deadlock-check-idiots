@@ -49,7 +49,6 @@ public class DiscordBot extends ListenerAdapter {
 
         jda.awaitReady();
         registerCommands(jda);
-        log.info("Discord bot started");
     }
 
     private static void registerCommands(JDA jda) {
