@@ -94,7 +94,7 @@ public class GrowService {
         failChance = clampChance(failChance);
 
         double critChance = isScheduledMessage ? 0.0 : clampChance(
-                gameConfigService.getDouble(GameSetting.CRIT_CHANCE) + context.critChanceModifier()
+            gameConfigService.getDouble(GameSetting.CRIT_CHANCE) + context.critChanceModifier()
         );
 
 
@@ -115,7 +115,8 @@ public class GrowService {
             modifierAfterOutcome = 1.0 + (modifierAfterOutcome - 1.0) * critMultiplier;
         }
 
-        double finalModifier = 1.0 + (modifierAfterOutcome - 1.0) * (1.0 + context.growthModifier());
+        double growthModifier = isScheduledMessage ? 0 : context.growthModifier();
+        double finalModifier = 1.0 + (modifierAfterOutcome - 1.0) * (1.0 + growthModifier);
 
         double newValue = round(oldValue * finalModifier);
         double diff = round(Math.abs(newValue - oldValue));

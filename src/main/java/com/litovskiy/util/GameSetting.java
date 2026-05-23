@@ -69,13 +69,13 @@ public enum GameSetting {
     OFFLINE_FAIL_CHANCE(
         SettingGroup.GROWTH,
         "offline_fail_chance",
-        "0.2",
+        "0.35",
         "Дополнительный шанс неудачи при росте в отложенных сообщениях (от 0 до 1)"),
 
     OFFLINE_FAIL_PERCENT(
         SettingGroup.GROWTH,
         "offline_fail_percent",
-        "0.15",
+        "0.1",
         "Дополнительный процент уменьшения при росте в отложенных сообщениях (от 0 до 1)"),
 
     CRIT_CHANCE(
