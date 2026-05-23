@@ -41,7 +41,7 @@ public class GrowService {
     private final Random random;
 
     @Transactional
-    public String grow(Platform platform, long playerId, Long scopeId) {
+    public String grow(Platform platform, long playerId, Long scopeId, boolean isScheduledMessage) {
         LocalDateTime now = LocalDateTime.now();
         Player player = playerAccountService.resolveOrCreate(platform, playerId);
 
@@ -51,11 +51,11 @@ public class GrowService {
         }
 
         GrowthStyle style = conversationStyleService.getStyle(platform, scopeId);
-        GrowthCalculation growthCalculation = calculateGrowth(platform, scopeId, player);
+        GrowthCalculation growthCalculation = calculateGrowth(platform, scopeId, player, isScheduledMessage);
 
 
         PlayerGrowthStats stat = playerGrowthStatsService.logGrowthStats(playerId, growthCalculation.outcome());
-        gameLogService.saveGrowLog(playerId, growthCalculation, stat);
+        gameLogService.saveGrowLog(playerId, growthCalculation, stat, isScheduledMessage);
 
 
         player.setSize(growthCalculation.newValue());
@@ -81,20 +81,20 @@ public class GrowService {
         return Optional.empty();
     }
 
-    private GrowthCalculation calculateGrowth(Platform platform, Long scopeId, Player player) {
+    private GrowthCalculation calculateGrowth(Platform platform, Long scopeId, Player player, boolean isScheduledMessage) {
         double oldValue = player.getSize();
 
         double activityBonus = activityService.getGrowthBonusMultiplier(platform, player.getId(), scopeId);
         GrowthContext context = consumePendingEffects(player);
 
-        double failChance = clampChance(
-            gameConfigService.getDouble(GameSetting.FAIL_CHANCE)
-                + context.failChanceModifier()
-        );
+        double failChance = gameConfigService.getDouble(GameSetting.FAIL_CHANCE) + context.failChanceModifier();
+        if (isScheduledMessage) {
+            failChance += gameConfigService.getDouble(GameSetting.OFFLINE_FAIL_CHANCE);
+        }
+        failChance = clampChance(failChance);
 
-        double critChance = clampChance(
-            gameConfigService.getDouble(GameSetting.CRIT_CHANCE)
-                + context.critChanceModifier()
+        double critChance = isScheduledMessage ? 0.0 : clampChance(
+                gameConfigService.getDouble(GameSetting.CRIT_CHANCE) + context.critChanceModifier()
         );
 
 
@@ -105,7 +105,7 @@ public class GrowService {
         double roll = random.nextDouble();
 
         if (roll < failChance) {
-            return calculateFail(oldValue, base, context, failChance, critChance, activityBonus);
+            return calculateFail(oldValue, base, context, failChance, critChance, activityBonus, isScheduledMessage);
         }
 
         boolean crit = roll < failChance + critChance;
@@ -158,9 +158,15 @@ public class GrowService {
         GrowthContext context,
         double failChance,
         double critChance,
-        double activityBonus
+        double activityBonus,
+        boolean isScheduledMessage
     ) {
         double failPercent = gameConfigService.getDouble(GameSetting.FAIL_PERCENT);
+        if (isScheduledMessage) {
+            failPercent += gameConfigService.getDouble(GameSetting.OFFLINE_FAIL_PERCENT);
+        }
+        failPercent = clamp(failPercent, 0, 1);
+
         double newValue = Math.max(0.0, round(oldValue * (1.0 - failPercent)));
         double diff = round(Math.abs(newValue - oldValue));
 

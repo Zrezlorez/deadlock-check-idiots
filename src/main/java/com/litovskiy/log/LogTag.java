@@ -7,6 +7,7 @@ public enum LogTag {
     CRITICAL_GROWTH,
     FAILED_GROWTH,
 
+    OFFLINE_GROWTH,
     HIGH_GROWTH,
     LOW_GROWTH,
 

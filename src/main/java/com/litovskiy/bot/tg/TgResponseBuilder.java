@@ -32,8 +32,10 @@ public class TgResponseBuilder {
         return switch (command) {
             case "/help", "/start" ->
                 new BotReply(getHelp(), false);
-            case "/grow" ->
-                new BotReply(buildGrowResponse(chatId, profileId), false);
+            case "/grow" -> {
+                Boolean isScheduledMessage = update.getMessage().getIsFromOffline();
+                yield new BotReply(buildGrowResponse(chatId, profileId, isScheduledMessage), false);
+            }
             case "/fuck" ->
                 new BotReply(buildFuckResponse(update, chatId, profileId), false);
             case "/jackpot" ->
@@ -77,9 +79,11 @@ public class TgResponseBuilder {
             """;
     }
 
-    private String buildGrowResponse(long chatId, long profileId) {
+    private String buildGrowResponse(long chatId, long profileId, Boolean isScheduledMessage) {
         Long scopeId = chatId < 0 ? chatId : null;
-        return growService.grow(Platform.TELEGRAM, profileId, scopeId);
+        boolean isScheduled = isScheduledMessage != null && isScheduledMessage;
+
+        return growService.grow(Platform.TELEGRAM, profileId, scopeId, isScheduled);
     }
 
     private String buildFuckResponse(Update update, long chatId, long profileId) {
