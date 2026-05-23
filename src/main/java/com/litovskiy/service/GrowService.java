@@ -147,7 +147,7 @@ public class GrowService {
         baseGrowth = StringUtil.clamp(baseGrowth, minGrowth, maxGrowth);
 
         double slowdown = 1.0 / (1.0 + currentSize / slowScale);
-        double modifier = baseGrowth * slowdown * activityBonus;
+        double modifier = 1.0 + (baseGrowth - 1.0) * slowdown * activityBonus;
 
         return new GrowthBase(baseGrowth, slowdown, modifier);
     }
