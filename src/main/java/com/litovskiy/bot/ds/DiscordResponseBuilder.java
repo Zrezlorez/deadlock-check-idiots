@@ -49,7 +49,7 @@ public class DiscordResponseBuilder {
 
     private String buildGrowResponse(SlashCommandInteractionEvent event) {
         Long scopeId = event.isFromGuild() ? event.getGuild().getIdLong() : null;
-        return growService.grow(Platform.DISCORD, event.getUser().getIdLong(), scopeId);
+        return growService.grow(Platform.DISCORD, event.getUser().getIdLong(), scopeId, false);
     }
 
     private String buildFuckResponse(SlashCommandInteractionEvent event) {

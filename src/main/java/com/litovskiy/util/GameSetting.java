@@ -66,6 +66,18 @@ public enum GameSetting {
         "0.10",
         "Процент уменьшения при неудаче от 0 до 1"),
 
+    OFFLINE_FAIL_CHANCE(
+        SettingGroup.GROWTH,
+        "offline_fail_chance",
+        "0.35",
+        "Дополнительный шанс неудачи при росте в отложенных сообщениях (от 0 до 1)"),
+
+    OFFLINE_FAIL_PERCENT(
+        SettingGroup.GROWTH,
+        "offline_fail_percent",
+        "0.1",
+        "Дополнительный процент уменьшения при росте в отложенных сообщениях (от 0 до 1)"),
+
     CRIT_CHANCE(
         SettingGroup.GROWTH,
         "crit_chance",
@@ -218,7 +230,7 @@ public enum GameSetting {
                  JACKPOT_FAIL_CHANCE, JACKPOT_CRIT_CHANCE, SLOW_GROWTH_PENALTY, TURTLE_GROWTH_BONUS,
                  MAX_PENDING_FAIL_CHANCE, MAX_PENDING_CRIT_CHANCE,
                  MIN_PENDING_GROWTH, MAX_PENDING_GROWTH, PRAY_FAIL_BONUS,
-                 ABILITY_TRANSFER_COMMISSION -> {
+                 ABILITY_TRANSFER_COMMISSION, OFFLINE_FAIL_CHANCE, OFFLINE_FAIL_PERCENT -> {
                 double value = Double.parseDouble(trimmed);
                 if (value < 0 || value > 1) {
                     throw new IllegalArgumentException("Значение должно быть в диапазоне от 0 до 1.");

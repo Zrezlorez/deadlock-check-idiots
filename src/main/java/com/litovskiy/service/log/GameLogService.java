@@ -27,7 +27,7 @@ public class GameLogService {
         return actionLogRepository.findByTargetIdOrderByCreatedAtDesc(targetId, PageRequest.of(page, size));
     }
 
-    public void saveGrowLog(Long playerId, GrowthCalculation growthCalculation, PlayerGrowthStats stat) {
+    public void saveGrowLog(Long playerId, GrowthCalculation growthCalculation, PlayerGrowthStats stat, boolean isScheduledMessage) {
         ActionLog actionLog = new ActionLog();
         actionLog.setActorId(playerId);
         actionLog.setOldActorSize(growthCalculation.oldValue());
@@ -45,7 +45,8 @@ public class GameLogService {
             growthCalculation.growthModifier(),
             growthCalculation.modifierBeforeOutcome(),
             growthCalculation.modifierAfterOutcome(),
-            growthCalculation.finalModifier()
+            growthCalculation.finalModifier(),
+            isScheduledMessage
         );
         actionLog.setMetadata(mapper.toJson(logMetadata));
 
@@ -74,6 +75,10 @@ public class GameLogService {
 
         if (stat.getCurrentNormalStreak() > 1) {
             actionLog.getTags().add(LogTag.NORMAL_STREAK);
+        }
+
+        if (isScheduledMessage) {
+            actionLog.getTags().add(LogTag.OFFLINE_GROWTH);
         }
 
         actionLogRepository.save(actionLog);

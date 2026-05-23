@@ -19,6 +19,8 @@ public record GrowLogMetadata(
 
     double modifierBeforeOutcome,
     double modifierAfterOutcome,
-    double finalModifier
+    double finalModifier,
+
+    boolean isScheduledMessage
 ) implements LogMetadata {
 }
