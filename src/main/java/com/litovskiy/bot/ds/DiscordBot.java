@@ -4,6 +4,7 @@ import com.litovskiy.entity.Platform;
 import com.litovskiy.service.activity.ActivityService;
 import com.litovskiy.service.ConversationParticipantService;
 import com.litovskiy.service.PlayerAccountService;
+import com.litovskiy.util.CommandResult;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -31,6 +32,7 @@ public class DiscordBot extends ListenerAdapter {
     private final ConversationParticipantService conversationParticipantService;
     private final PlayerAccountService playerAccountService;
     private final OkHttpClient httpClient;
+    private final DiscordMessageSender sender;
 
     @Value("${discord.token}")
     private String token;
@@ -86,10 +88,9 @@ public class DiscordBot extends ListenerAdapter {
                 event.getGuild().getIdLong()
             );
         }
-        String response = discordResponseBuilder.buildResponse(event);
-        if (response != null) {
-            event.reply(response).queue();
-        }
+        CommandResult response = discordResponseBuilder.buildResponse(event);
+
+        sender.sendMessages(event, response);
     }
 
     @Override

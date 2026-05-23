@@ -1,6 +1,7 @@
 package com.litovskiy.service;
 
 import com.litovskiy.entity.PlayerGrowthStats;
+import com.litovskiy.util.CommandResult;
 import com.litovskiy.util.GameSetting;
 import com.litovskiy.service.activity.ActivityService;
 import com.litovskiy.service.data.PlayerService;
@@ -11,6 +12,7 @@ import com.litovskiy.service.log.GameLogService;
 import com.litovskiy.service.log.PlayerGrowthStatsService;
 import com.litovskiy.util.GrowOutcome;
 import com.litovskiy.util.GrowthCalculation;
+import com.litovskiy.util.GrowthContext;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,18 +38,19 @@ public class GrowService {
     private final ActivityService activityService;
     private final ConversationStyleService conversationStyleService;
     private final GameConfigService gameConfigService;
+    private final PlayerStatusService playerStatusService;
     private final PlayerGrowthStatsService playerGrowthStatsService;
     private final GameLogService gameLogService;
     private final Random random;
 
     @Transactional
-    public String grow(Platform platform, long playerId, Long scopeId) {
+    public CommandResult grow(Platform platform, long playerId, Long scopeId) {
         LocalDateTime now = LocalDateTime.now();
         Player player = playerAccountService.resolveOrCreate(platform, playerId);
 
         Optional<String> cooldown = checkCooldown(player, now);
         if (cooldown.isPresent()) {
-            return cooldown.get();
+            return CommandResult.single(cooldown.get());
         }
 
         GrowthStyle style = conversationStyleService.getStyle(platform, scopeId);
@@ -62,7 +65,7 @@ public class GrowService {
         player.setLastGrowTime(now);
         playerDao.save(player);
 
-        return buildResultMessage(style, growthCalculation);
+        return CommandResult.single(buildResultMessage(style, growthCalculation));
     }
 
     private Optional<String> checkCooldown(Player player, LocalDateTime now) {
@@ -86,17 +89,10 @@ public class GrowService {
 
         double activityBonus = activityService.getGrowthBonusMultiplier(platform, player.getId(), scopeId);
         GrowthContext context = consumePendingEffects(player);
+        context = playerStatusService.applyGrowthStatusEffects(player, context);
 
-        double failChance = clampChance(
-            gameConfigService.getDouble(GameSetting.FAIL_CHANCE)
-                + context.failChanceModifier()
-        );
-
-        double critChance = clampChance(
-            gameConfigService.getDouble(GameSetting.CRIT_CHANCE)
-                + context.critChanceModifier()
-        );
-
+        double failChance = context.failChance();
+        double critChance = context.critChance();
 
         critChance = Math.min(critChance, 1.0 - failChance);
 
@@ -111,8 +107,7 @@ public class GrowService {
         boolean crit = roll < failChance + critChance;
         double modifierAfterOutcome = base.modifier();
         if (crit) {
-            double critMultiplier = gameConfigService.getDouble(GameSetting.CRIT_MULTIPLIER);
-            modifierAfterOutcome = 1.0 + (modifierAfterOutcome - 1.0) * critMultiplier;
+            modifierAfterOutcome = 1.0 + (modifierAfterOutcome - 1.0) * context.critMultiplier();
         }
 
         double finalModifier = 1.0 + (modifierAfterOutcome - 1.0) * (1.0 + context.growthModifier());
@@ -130,7 +125,7 @@ public class GrowService {
             base.slowdown(),
             failChance,
             critChance,
-            context.growthModifier,
+            context.growthModifier(),
             base.modifier(),
             modifierAfterOutcome,
             finalModifier
@@ -143,11 +138,11 @@ public class GrowService {
         double maxGrowth = gameConfigService.getDouble(GameSetting.GROWTH_MAX);
         double slowScale = gameConfigService.getDouble(GameSetting.SLOW_SCALE);
 
-        double baseGrowth = growthMean + random.nextGaussian() * 0.01;
+        double baseGrowth = growthMean + random.nextGaussian() * 0.05;
         baseGrowth = StringUtil.clamp(baseGrowth, minGrowth, maxGrowth);
 
         double slowdown = 1.0 / (1.0 + currentSize / slowScale);
-        double modifier = baseGrowth * slowdown * activityBonus;
+        double modifier = 1.0 + (baseGrowth - 1.0) * slowdown * activityBonus;
 
         return new GrowthBase(baseGrowth, slowdown, modifier);
     }
@@ -160,8 +155,8 @@ public class GrowService {
         double critChance,
         double activityBonus
     ) {
-        double failPercent = gameConfigService.getDouble(GameSetting.FAIL_PERCENT);
-        double newValue = Math.max(0.0, round(oldValue * (1.0 - failPercent)));
+
+        double newValue = Math.max(0.0, round(oldValue * (1.0 - context.failPercent())));
         double diff = round(Math.abs(newValue - oldValue));
 
         double finalModifier = oldValue == 0.0 ? 1.0 : newValue / oldValue;
@@ -219,9 +214,15 @@ public class GrowService {
     }
 
     private GrowthContext consumePendingEffects(Player player) {
+        double critChance = gameConfigService.getDouble(GameSetting.CRIT_CHANCE);
+        double critMultiplier = gameConfigService.getDouble(GameSetting.CRIT_MULTIPLIER);
+        double failChance = gameConfigService.getDouble(GameSetting.FAIL_CHANCE);
+        double failPercent = gameConfigService.getDouble(GameSetting.FAIL_PERCENT);
         GrowthContext context = new GrowthContext(
-            player.getPendingFailChanceModifier(),
-            player.getPendingCritChanceModifier(),
+            clampChance(critChance + player.getPendingCritChanceModifier()),
+            critMultiplier,
+            clampChance(failChance + player.getPendingFailChanceModifier()),
+            failPercent,
             player.getPendingGrowthModifier()
         );
         player.setPendingFailChanceModifier(0.0);
@@ -231,14 +232,10 @@ public class GrowService {
     }
 
     private double clampChance(double value) {
-        return clamp(value, 0, 0.95);
+        return clamp(round(value), 0, 0.95);
     }
 
     private record GrowthBase(double baseGrowth, double slowdown, double modifier) {
     }
 
-    private record GrowthContext(double failChanceModifier,
-                                 double critChanceModifier,
-                                 double growthModifier) {
-    }
 }

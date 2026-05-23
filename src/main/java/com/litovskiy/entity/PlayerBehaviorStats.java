@@ -1,5 +1,6 @@
 package com.litovskiy.entity;
 
+import com.litovskiy.log.Action;
 import com.litovskiy.log.PlayerArchetype;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,6 +9,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -16,14 +19,17 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-class PlayerBehaviorStats {
+@Table(
+    name = "player_behavior_stats",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_player_id", columnNames = {"player_id"})
+    }
+)
+public class PlayerBehaviorStats {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
-
-    @Column(name = "chat_id", nullable = false)
-    private Long chatId;
 
     @Column(name = "player_id", nullable = false)
     private Long playerId;
@@ -40,17 +46,23 @@ class PlayerBehaviorStats {
     @Column(name = "defensive_actions")
     private int defensiveActions;
 
-    @Column(name = "crits")
-    private int crits;
+    @Column(name = "last_ability_action")
+    @Enumerated(EnumType.STRING)
+    private Action lastAbilityAction;
 
-    @Column(name = "fails")
-    private int fails;
-
-    // изменение размера последние n ростов
-    @Column(name = "average_growth")
-    private double averageGrowth;
+    @Column(name = "same_ability_streak")
+    private int sameAbilityStreak;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "archetype")
     private PlayerArchetype archetype;
+
+    public PlayerBehaviorStats(Long playerId) {
+        this.playerId = playerId;
+    }
+
+    public void incrementAbilityStreak() {
+        sameAbilityStreak++;
+    }
+
 }

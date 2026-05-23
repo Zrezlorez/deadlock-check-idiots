@@ -52,7 +52,6 @@ public class PlayerAccountService {
         if (changed) {
             playerService.save(player);
         }
-        log.info("Update telegram profile for player {}", player);
     }
 
     public void updateDiscordTag(long profileId, String discordTag) {
