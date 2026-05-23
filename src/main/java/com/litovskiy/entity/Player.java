@@ -54,25 +54,21 @@ public class Player {
     @Column(name = "discord_tag")
     private String discordTag;
 
-    @Column(name = "pending_fail_chance_penalty", nullable = false, columnDefinition = "double precision default 0")
-    private double pendingFailChancePenalty;
+    @Column(name = "pending_fail_chance_modifier", nullable = false, columnDefinition = "double precision default 0")
+    private double pendingFailChanceModifier;
 
-    @Column(name = "pending_crit_chance_bonus", nullable = false, columnDefinition = "double precision default 0")
-    private double pendingCritChanceBonus;
+    @Column(name = "pending_crit_chance_modifier", nullable = false, columnDefinition = "double precision default 0")
+    private double pendingCritChanceModifier;
 
-    @Column(name = "pending_growth_penalty", nullable = false, columnDefinition = "double precision default 0")
-    private double pendingGrowthPenalty;
-
-    @Column(name = "pending_growth_bonus", nullable = false, columnDefinition = "double precision default 0")
-    private double pendingGrowthBonus;
+    @Column(name = "pending_growth_modifier", nullable = false, columnDefinition = "double precision default 0")
+    private double pendingGrowthModifier;
 
     public Player(double size) {
         this.size = size;
         this.lastGrowTime = null;
         this.lastAbilityTime = null;
-        this.pendingFailChancePenalty = 0.0;
-        this.pendingCritChanceBonus = 0.0;
-        this.pendingGrowthPenalty = 0.0;
-        this.pendingGrowthBonus = 0.0;
+        this.pendingFailChanceModifier = 0.0;
+        this.pendingCritChanceModifier = 0.0;
+        this.pendingGrowthModifier = 0.0;
     }
 }

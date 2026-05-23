@@ -3,13 +3,20 @@ package com.litovskiy.service;
 import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import com.litovskiy.service.log.GameLogService;
+import com.litovskiy.util.GameSetting;
+import com.litovskiy.util.SettingGroup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +25,8 @@ public class AdminCommandService {
     private final AdminAccessService adminAccessService;
     private final GameConfigService gameConfigService;
     private final PlayerService playerDao;
+    private final DateTimeFormatter formatter;
+    private final GameLogService gameLogService;
 
     public String handle(Platform requesterPlatform, long requesterProfileId, String rawCommand) {
         if (!adminAccessService.isAdmin(requesterPlatform, requesterProfileId)) {
@@ -87,7 +96,7 @@ public class AdminCommandService {
 
     private String handlePlayer(String[] parts) {
         if (parts.length < 4) {
-            return "Использование: admin player <show|set-size|add-size|reset-cooldown|set-last-grow> <platform> <username|tag|id> [value]";
+            return "Использование: admin player <command> <platform> <username|tag|id> [values]";
         }
 
         Platform targetPlatform = parsePlatform(parts[2]);
@@ -106,11 +115,17 @@ public class AdminCommandService {
             case "set-size" -> updatePlayerSize(player, parts, true);
             case "add-size" -> updatePlayerSize(player, parts, false);
             case "reset-cooldown" -> resetCooldown(player);
+            case "log" -> getLogs(player, parts);
             case "set-last-grow" -> setLastGrow(player, parts);
             case "reset-ability" -> resetAbilityCooldown(player);
             case "set-last-ability" -> setLastAbility(player, parts);
             default -> "Неизвестная команда игрока.";
         };
+    }
+
+    // TODO: доделать логи в админке
+    private String getLogs(Player player, String[] parts) {
+        return "В разработке";
     }
 
     private Player resolvePlayer(Platform platform, String identifier) {
@@ -202,7 +217,8 @@ public class AdminCommandService {
             + "identifier = " + identifier + "\n"
             + "playerChatId = " + player.getId() + "\n"
             + "size = " + player.getSize() + "\n"
-            + "lastGrowTime = " + player.getLastGrowTime() + "\n"
+            + "lastGrowTime = " + player.getLastGrowTime().format(formatter) + "\n"
+            + "lastGrowTime = " + player.getLastAbilityTime().format(formatter) + "\n"
             + "telegramChatId = " + player.getTelegramChatId() + "\n"
             + "telegramUsername = " + player.getTelegramUsername() + "\n"
             + "discordUserId = " + player.getDiscordUserId() + "\n"
@@ -223,9 +239,33 @@ public class AdminCommandService {
 
     private String availableSettings() {
         return Arrays.stream(GameSetting.values())
-            .map(GameSetting::getKey)
-            .reduce((left, right) -> left + ", " + right)
-            .orElse("");
+            .collect(Collectors.groupingBy(
+                GameSetting::getGroup,
+                LinkedHashMap::new,
+                Collectors.toList()
+            ))
+            .entrySet()
+            .stream()
+            .map(entry -> formatGroup(entry.getKey(), entry.getValue()))
+            .collect(Collectors.joining("\n\n"));
+    }
+
+    private String formatGroup(SettingGroup group, List<GameSetting> settings) {
+        StringBuilder builder = new StringBuilder();
+
+        builder.append(group.getDisplayName()).append("\n");
+
+        for (GameSetting setting : settings) {
+            builder.append("• ")
+                .append(setting.getKey())
+                .append(" = ")
+                .append(setting.getDefaultValue())
+                .append("\n  ")
+                .append(setting.getDescription())
+                .append("\n");
+        }
+
+        return builder.toString().trim();
     }
 
     private String help() {

@@ -2,6 +2,7 @@ package com.litovskiy.service;
 
 import com.litovskiy.repository.AppSettingRepository;
 import com.litovskiy.entity.AppSetting;
+import com.litovskiy.util.GameSetting;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

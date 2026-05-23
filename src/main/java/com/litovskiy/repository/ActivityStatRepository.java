@@ -2,7 +2,7 @@ package com.litovskiy.repository;
 
 import com.litovskiy.entity.ActivityStat;
 import com.litovskiy.entity.Platform;
-import com.litovskiy.entity.PlayerTotalProjection;
+import com.litovskiy.util.PlayerTotalProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
