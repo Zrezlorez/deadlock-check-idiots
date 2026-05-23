@@ -1,5 +1,6 @@
 package com.litovskiy.service;
 
+import com.litovskiy.entity.PlayerBehaviorStats;
 import com.litovskiy.log.Action;
 import com.litovskiy.log.metadata.FuckLogMetadata;
 import com.litovskiy.log.metadata.GrowthModifierLogMetadata;
@@ -11,9 +12,13 @@ import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import com.litovskiy.service.log.PlayerBehaviorStatService;
 import com.litovskiy.util.AbilitySelfContext;
 import com.litovskiy.util.AbilityTargetContext;
 import com.litovskiy.service.log.GameLogService;
+import com.litovskiy.util.CommandBlockReason;
+import com.litovskiy.util.CommandMessage;
+import com.litovskiy.util.CommandResult;
 import com.litovskiy.util.GameSetting;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -37,12 +42,14 @@ public class AbilityService {
     private final GameConfigService gameConfigService;
     private final GameLogService gameLogService;
     private final ConversationStyleService conversationStyleService;
+    private final PlayerBehaviorStatService playerBehaviorStatService;
+    private final PlayerStatusService playerStatusService;
     private final Clock clock;
 
 
-    public String fuck(Platform platform, long playerId, Long scopeId, long targetPlayerId) {
+    public CommandResult fuck(Platform platform, long playerId, Long scopeId, long targetPlayerId) {
         if (scopeId == null) {
-            return "Эта способность доступна только в беседе или на сервере.";
+            return CommandResult.single("Эта способность доступна только в беседе или на сервере.");
         }
 
         AbilityTargetContext context = prepareTargetAbility(
@@ -53,11 +60,18 @@ public class AbilityService {
         );
 
         if (!context.success()) {
-            return context.rejectionMessage();
+            return CommandResult.single(context.rejectionMessage());
         }
+
 
         Player actor = context.actor();
         Player target = context.target();
+
+        CommandBlockReason blockReason = playerStatusService.validateActionAllowed(actor, Action.FUCK);
+
+        if (!blockReason.allowed()) {
+            return CommandResult.single(blockReason.message());
+        }
 
         GrowthStyle growthStyle = conversationStyleService.getStyle(platform, scopeId);
 
@@ -68,32 +82,42 @@ public class AbilityService {
         double cost = round(actor.getSize() * costPercent);
         double oldActorSize = actor.getSize();
 
+        if (actor.getSize() < target.getSize() * 0.25) {
+            return CommandResult.single("Вы не можете атаковать игрока, если ваш рост меньше чем 25% от его размера");
+        }
+
         actor.setSize(Math.max(1.0, round(actor.getSize() - cost)));
         actor.setLastAbilityTime(LocalDateTime.now(clock));
 
+        double modifiedFailChance = playerStatusService.modifyFailChance(actor, target, failBonus);
         double oldTargetFailChance = target.getPendingFailChanceModifier();
-
         target.setPendingFailChanceModifier(Math.min(
             maxFailChance,
-            round(oldTargetFailChance + failBonus)
+            round(oldTargetFailChance + modifiedFailChance)
         ));
 
-
         FuckLogMetadata logMetadata = new FuckLogMetadata(oldTargetFailChance, target.getPendingFailChanceModifier(), cost);
+
         gameLogService.logAbility(playerId, oldActorSize, actor.getSize(),
             targetPlayerId, target.getSize(), null,
             Action.FUCK, logMetadata);
 
+
         playerDao.save(target);
         playerDao.save(actor);
 
-        return "Вы усилили шанс неудачи цели на " + toPercent(failBonus)
+        String result = "Вы усилили шанс неудачи цели на " + toPercent(failBonus)
             + "% за " + GrowthStyle.convertValue(cost, growthStyle) + ". Следующая попытка роста у цели будет опаснее.";
+
+        return CommandResult.of(
+            CommandMessage.reply(result)
+            //CommandMessage.broadcast(statusMsg)
+        );
     }
 
-    public String slow(Platform platform, long playerId, Long scopeId, long targetPlayerId) {
+    public CommandResult slow(Platform platform, long playerId, Long scopeId, long targetPlayerId) {
         if (scopeId == null) {
-            return "Эта способность доступна только в беседе или на сервере.";
+            return CommandResult.single("Эта способность доступна только в беседе или на сервере.");
         }
 
 
@@ -105,19 +129,27 @@ public class AbilityService {
         );
 
         if (!context.success()) {
-            return context.rejectionMessage();
+            return CommandResult.single(context.rejectionMessage());
         }
 
         Player actor = context.actor();
         Player target = context.target();
 
+        CommandBlockReason blockReason = playerStatusService.validateActionAllowed(actor, Action.SLOW);
+
+        if (!blockReason.allowed()) {
+            return CommandResult.single(blockReason.message());
+        }
+
         double growthPenalty = gameConfigService.getDouble(GameSetting.SLOW_GROWTH_PENALTY);
         double minGrowth = gameConfigService.getDouble(GameSetting.MIN_PENDING_GROWTH);
         double maxGrowth = gameConfigService.getDouble(GameSetting.MAX_PENDING_GROWTH);
 
+        double affectedGrowthModifier = playerStatusService.modifyGrowthModifier(actor, target, Action.SLOW, growthPenalty);
+
         double oldTargetGrowthModifier = target.getPendingFailChanceModifier();
         double newTargetGrowthModifier = clamp(
-            target.getPendingGrowthModifier() - growthPenalty,
+            target.getPendingGrowthModifier() - affectedGrowthModifier,
             minGrowth,
             maxGrowth
         );
@@ -129,22 +161,30 @@ public class AbilityService {
             targetPlayerId, target.getSize(), null,
             Action.SLOW, logMetadata);
 
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.SLOW);
+        String statusMsg = playerStatusService.applyStatus(actor, stat);
+
         playerDao.save(target);
         playerDao.save(actor);
 
-        return "Вы ослабили следующий рост цели на " + toPercent(growthPenalty) + "%.";
+        String result = "Вы ослабили следующий рост цели на " + toPercent(growthPenalty) + "%.";
+
+        return CommandResult.of(
+            CommandMessage.reply(result),
+            CommandMessage.broadcast(statusMsg)
+        );
     }
 
-    public String transfer(Platform platform, long playerId, Long scopeId, long targetPlayerId, String value) {
+    public CommandResult transfer(Platform platform, long playerId, Long scopeId, long targetPlayerId, String value) {
         if (scopeId == null) {
-            return "Эта способность доступна только в беседе или на сервере.";
+            return CommandResult.single("Эта способность доступна только в беседе или на сервере.");
         }
 
         double transferValue;
         try {
             transferValue = Double.parseDouble(value);
         } catch (NumberFormatException e) {
-            return "После команды нужно указать число для перевода";
+            return CommandResult.single("После команды нужно указать число для перевода");
         }
 
         AbilityTargetContext context = prepareTargetAbility(
@@ -154,13 +194,21 @@ public class AbilityService {
             targetPlayerId
         );
 
-        if (!context.success()) {
-            return context.rejectionMessage();
+        boolean ignoreCooldown = playerStatusService.ignoresAbilityCooldown(context.actor(), Action.TRANSFER);
+
+        if (!ignoreCooldown && !context.success()) {
+            return CommandResult.single(context.rejectionMessage());
         }
 
         LocalDateTime now = LocalDateTime.now(clock);
         Player actor = context.actor();
         Player target = context.target();
+
+        CommandBlockReason blockReason = playerStatusService.validateActionAllowed(actor, Action.TRANSFER);
+
+        if (!blockReason.allowed()) {
+            return CommandResult.single(blockReason.message());
+        }
 
         GrowthStyle growthStyle = conversationStyleService.getStyle(platform, scopeId);
 
@@ -172,13 +220,14 @@ public class AbilityService {
                 round(actor.getSize() - diff)
             ));
             playerDao.save(actor);
-            return "Вы обвиняетесь в подрыве государственного строя. " +
+            String result = "Вы обвиняетесь в подрыве государственного строя. " +
                 "В качестве меры наказания к вам будет применен уголовный штраф в размере 5% от текущего роста. " +
                 "Ваш рост уменьшен на " + GrowthStyle.convertValue(diff, growthStyle) + ".";
+            return CommandResult.single(result);
         }
 
         if (actor.getSize() - 1 < transferValue) {
-            return "Вы не можете перевести больше, чем у вас есть";
+            return CommandResult.single("Вы не можете перевести больше, чем у вас есть");
         }
 
         String name = "камута";
@@ -189,7 +238,9 @@ public class AbilityService {
         }
 
         double costPercent = gameConfigService.getDouble(GameSetting.ABILITY_TRANSFER_COMMISSION);
-        double cost = round(transferValue * costPercent);
+
+        double affectedCostPercent = playerStatusService.modifyTransferCommission(actor, costPercent);
+        double cost = round(transferValue * affectedCostPercent);
 
         double oldActorSize = actor.getSize();
         double oldTargetSize = target.getSize();
@@ -199,28 +250,43 @@ public class AbilityService {
 
         target.setSize(Math.max(
             1.0,
-            round(target.getSize() + transferValue - cost)
+            round(target.getSize() + transferValue - affectedCostPercent)
         ));
 
-        TransferLogMetadata logMetadata = new TransferLogMetadata(cost);
+        TransferLogMetadata logMetadata = new TransferLogMetadata(affectedCostPercent);
         gameLogService.logAbility(playerId, oldActorSize, actor.getSize(),
             targetPlayerId, oldTargetSize, target.getSize(),
             Action.TRANSFER, logMetadata);
 
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.TRANSFER);
+        String statusMsg = playerStatusService.applyStatus(actor, stat);
+
         playerDao.save(target);
         playerDao.save(actor);
-        return "Вы перевели " + GrowthStyle.convertValue(transferValue, growthStyle) + " "
+
+        String result = "Вы перевели " + GrowthStyle.convertValue(transferValue, growthStyle) + " "
             + name + " с комиссией в размере " + GrowthStyle.convertValue(cost, growthStyle);
+
+        return CommandResult.of(
+            CommandMessage.reply(result),
+            CommandMessage.broadcast(statusMsg)
+        );
     }
 
-    public String jackpot(Platform platform, long playerId) {
+    public CommandResult jackpot(Platform platform, long playerId) {
         AbilitySelfContext context = prepareSelfAbility(platform, playerId);
 
         if (!context.success()) {
-            return context.rejectionMessage();
+            return CommandResult.single(context.rejectionMessage());
         }
 
-        Player player = context.player();
+        Player actor = context.player();
+
+        CommandBlockReason blockReason = playerStatusService.validateActionAllowed(actor, Action.JACKPOT);
+
+        if (!blockReason.allowed()) {
+            return CommandResult.single(blockReason.message());
+        }
 
         double failBonus = gameConfigService.getDouble(GameSetting.JACKPOT_FAIL_CHANCE);
         double critBonus = gameConfigService.getDouble(GameSetting.JACKPOT_CRIT_CHANCE);
@@ -228,19 +294,19 @@ public class AbilityService {
         double maxCritChance = gameConfigService.getDouble(GameSetting.MAX_PENDING_CRIT_CHANCE);
         double maxFailChance = gameConfigService.getDouble(GameSetting.MAX_PENDING_FAIL_CHANCE);
 
-        double oldCritChance = player.getPendingCritChanceModifier();
+        double oldCritChance = actor.getPendingCritChanceModifier();
         double newCritChance = round(oldCritChance + critBonus);
 
-        double oldFailChance = player.getPendingFailChanceModifier();
+        double oldFailChance = actor.getPendingFailChanceModifier();
         double newFailChance = round(oldFailChance + failBonus);
 
-        player.setLastAbilityTime(LocalDateTime.now(clock));
-        player.setPendingCritChanceModifier(Math.min(
+        actor.setLastAbilityTime(LocalDateTime.now(clock));
+        actor.setPendingCritChanceModifier(Math.min(
             maxCritChance,
             newCritChance
         ));
 
-        player.setPendingFailChanceModifier(Math.min(
+        actor.setPendingFailChanceModifier(Math.min(
             maxFailChance,
             newFailChance
         ));
@@ -251,78 +317,117 @@ public class AbilityService {
             newCritChance - oldCritChance,
             newFailChance - oldFailChance);
 
-        gameLogService.logAbility(playerId, player.getSize(), null,
+        gameLogService.logAbility(playerId, actor.getSize(), null,
             null, null, null,
             Action.JACKPOT, logMetadata);
 
-        playerDao.save(player);
-        return "Вы увеличили шанс джекпота на " + toPercent(critBonus) + "% и повысили шанс неудачи на " + toPercent(failBonus)
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.JACKPOT);
+        String statusMsg = playerStatusService.applyStatus(actor, stat);
+
+        playerDao.save(actor);
+        String result = "Вы увеличили шанс джекпота на " + toPercent(critBonus) + "% и повысили шанс неудачи на " + toPercent(failBonus)
             + "% для следующего роста.";
+
+        return CommandResult.of(
+            CommandMessage.reply(result),
+            CommandMessage.broadcast(statusMsg)
+        );
     }
 
-    public String turtle(Platform platform, long playerId) {
+    public CommandResult turtle(Platform platform, long playerId) {
         AbilitySelfContext context = prepareSelfAbility(platform, playerId);
 
         if (!context.success()) {
-            return context.rejectionMessage();
+            return CommandResult.single(context.rejectionMessage());
         }
 
-        Player player = context.player();
+        Player actor = context.player();
+
+        CommandBlockReason blockReason = playerStatusService.validateActionAllowed(actor, Action.TURTLE);
+
+        if (!blockReason.allowed()) {
+            return CommandResult.single(blockReason.message());
+        }
 
         double increaseBonus = gameConfigService.getDouble(GameSetting.TURTLE_GROWTH_BONUS);
         double maxGrowthBonus = gameConfigService.getDouble(GameSetting.MAX_PENDING_GROWTH);
 
-        double oldGrowthBonus = player.getPendingGrowthModifier();
+        double affectedGrowthModifier = playerStatusService.modifyGrowthModifier(actor, null, Action.TURTLE, increaseBonus);
 
-        player.setLastAbilityTime(LocalDateTime.now(clock));
-        player.setPendingGrowthModifier(Math.min(
+        double oldGrowthBonus = actor.getPendingGrowthModifier();
+
+
+        actor.setLastAbilityTime(LocalDateTime.now(clock));
+        actor.setPendingGrowthModifier(Math.min(
             maxGrowthBonus,
-            round(oldGrowthBonus + increaseBonus)
+            round(oldGrowthBonus + affectedGrowthModifier)
         ));
 
         GrowthModifierLogMetadata logMetadata = new GrowthModifierLogMetadata(
             oldGrowthBonus,
-            player.getPendingGrowthModifier(),
+            actor.getPendingGrowthModifier(),
             increaseBonus
         );
 
-        gameLogService.logAbility(playerId, player.getSize(), null,
+        gameLogService.logAbility(playerId, actor.getSize(), null,
             null, null, null,
             Action.TURTLE, logMetadata);
 
 
-        playerDao.save(player);
-        return "Вы усилили свой следующий рост на " + toPercent(increaseBonus) + "%.";
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.TURTLE);
+        String statusMsg = playerStatusService.applyStatus(actor, stat);
+
+        playerDao.save(actor);
+        String result = "Вы усилили свой следующий рост на " + toPercent(increaseBonus) + "%.";
+
+        return CommandResult.of(
+            CommandMessage.reply(result),
+            CommandMessage.broadcast(statusMsg)
+        );
     }
 
-    public String pray(Platform platform, long profileId) {
-        AbilitySelfContext context = prepareSelfAbility(platform, profileId);
+    public CommandResult pray(Platform platform, long playerId) {
+        AbilitySelfContext context = prepareSelfAbility(platform, playerId);
 
         if (!context.success()) {
-            return context.rejectionMessage();
+            return CommandResult.single(context.rejectionMessage());
         }
 
-        Player player = context.player();
+        Player actor = context.player();
+
+        CommandBlockReason blockReason = playerStatusService.validateActionAllowed(actor, Action.PRAY);
+
+        if (!blockReason.allowed()) {
+            return CommandResult.single(blockReason.message());
+        }
 
         double increaseBonus = gameConfigService.getDouble(GameSetting.PRAY_FAIL_BONUS);
 
-        double oldFailChance = player.getPendingFailChanceModifier();
-        player.setLastAbilityTime(LocalDateTime.now(clock));
-        player.setPendingFailChanceModifier(
+        double oldFailChance = actor.getPendingFailChanceModifier();
+        actor.setLastAbilityTime(LocalDateTime.now(clock));
+        actor.setPendingFailChanceModifier(
             round(oldFailChance - increaseBonus)
         );
 
         PrayLogMetadata logMetadata = new PrayLogMetadata(
             oldFailChance,
-            player.getPendingFailChanceModifier(),
+            actor.getPendingFailChanceModifier(),
             increaseBonus
         );
-        gameLogService.logAbility(profileId, player.getSize(), null,
+        gameLogService.logAbility(playerId, actor.getSize(), null,
             null, null, null,
             Action.PRAY, logMetadata);
 
-        playerDao.save(player);
-        return "Вы уменьшили шанс неудачи на " + toPercent(increaseBonus) + "% при следующем росте.";
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.TURTLE);
+        String statusMsg = playerStatusService.applyStatus(actor, stat);
+
+        playerDao.save(actor);
+        String result = "Вы уменьшили шанс неудачи на " + toPercent(increaseBonus) + "% при следующем росте.";
+
+        return CommandResult.of(
+            CommandMessage.reply(result),
+            CommandMessage.broadcast(statusMsg)
+        );
     }
 
     private AbilitySelfContext prepareSelfAbility(Platform platform, long profileId) {

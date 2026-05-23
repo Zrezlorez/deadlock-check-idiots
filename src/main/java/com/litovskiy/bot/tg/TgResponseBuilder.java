@@ -8,12 +8,15 @@ import com.litovskiy.service.GrowService;
 import com.litovskiy.service.LeaderboardService;
 import com.litovskiy.service.PlayerAccountService;
 import com.litovskiy.service.LinkService;
+import com.litovskiy.util.CommandResult;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -28,38 +31,38 @@ public class TgResponseBuilder {
     private final AdminCommandService adminCommandService;
     private final PlayerAccountService playerAccountService;
 
-    public BotReply buildResponse(Update update, String command, String[] commandParts, long chatId, long profileId) {
+    public CommandResult buildResponse(Update update, String command, String[] commandParts, long chatId, long profileId) {
         return switch (command) {
             case "/help", "/start" ->
-                new BotReply(getHelp(), false);
+                CommandResult.single(getHelp());
             case "/grow" -> {
                 Boolean isScheduledMessage = update.getMessage().getIsFromOffline();
-                yield new BotReply(buildGrowResponse(chatId, profileId, isScheduledMessage), false);
+                yield buildGrowResponse(chatId, profileId, isScheduledMessage);
             }
             case "/fuck" ->
-                new BotReply(buildFuckResponse(update, chatId, profileId), false);
+                buildFuckResponse(update, chatId, profileId);
             case "/jackpot" ->
-                new BotReply(abilityService.jackpot(Platform.TELEGRAM, profileId), false);
+                abilityService.jackpot(Platform.TELEGRAM, profileId);
             case "/slow" ->
-                new BotReply(buildSlowResponse(update, chatId, profileId), false);
+                buildSlowResponse(update, chatId, profileId);
             case "/turtle" ->
-                new BotReply(abilityService.turtle(Platform.TELEGRAM, profileId), false);
+                abilityService.turtle(Platform.TELEGRAM, profileId);
             case "/pray" ->
-                new BotReply(abilityService.pray(Platform.TELEGRAM, profileId), false);
+                abilityService.pray(Platform.TELEGRAM, profileId);
             case "/transfer" ->
-                new BotReply(buildTransferResponse(update, chatId, commandParts, profileId), false);
+                buildTransferResponse(update, chatId, commandParts, profileId);
             case "/top" ->
-                new BotReply(buildLeaderboardResponse(chatId, profileId), true);
+                buildLeaderboardResponse(chatId, profileId);
             case "/link" ->
-                new BotReply(buildLinkResponse(commandParts, profileId), false);
+                buildLinkResponse(commandParts, profileId);
             case "/style" ->
-                new BotReply(buildStyleResponse(commandParts, chatId, profileId), false);
+                buildStyleResponse(commandParts, chatId, profileId);
             case "/admin" ->
-                new BotReply(adminCommandService.handle(
+                adminCommandService.handle(
                 Platform.TELEGRAM,
                 profileId,
                 commandParts.length > 1 ? commandParts[1] : ""
-            ), false);
+            );
             default -> null;
         };
     }
@@ -79,80 +82,80 @@ public class TgResponseBuilder {
             """;
     }
 
-    private String buildGrowResponse(long chatId, long profileId, Boolean isScheduledMessage) {
+    private CommandResult buildGrowResponse(long chatId, long profileId, Boolean isScheduledMessage) {
         Long scopeId = chatId < 0 ? chatId : null;
         boolean isScheduled = isScheduledMessage != null && isScheduledMessage;
 
         return growService.grow(Platform.TELEGRAM, profileId, scopeId, isScheduled);
     }
 
-    private String buildFuckResponse(Update update, long chatId, long profileId) {
+    private CommandResult  buildFuckResponse(Update update, long chatId, long profileId) {
         if (chatId >= 0) {
-            return "Эта способность доступна только в группах.";
+            return CommandResult.single("Эта способность доступна только в группах.");
         }
 
         User target = extractReplyTarget(update);
         if (target == null) {
-            return "Ответьте этой командой на сообщение цели.";
+            return CommandResult.single("Ответьте этой командой на сообщение цели.");
         }
 
         playerAccountService.updateTelegramProfile(target.getId(), StringUtil.formatTelegramDisplayName(target), target.getUserName());
         return abilityService.fuck(Platform.TELEGRAM, profileId, chatId, target.getId());
     }
 
-    private String buildSlowResponse(Update update, long chatId, long profileId) {
+    private CommandResult buildSlowResponse(Update update, long chatId, long profileId) {
         if (chatId >= 0) {
-            return "Эта способность доступна только в группах.";
+            return CommandResult.single("Эта способность доступна только в группах.");
         }
 
         User target = extractReplyTarget(update);
         if (target == null) {
-            return "Ответьте этой командой на сообщение цели.";
+            return CommandResult.single("Ответьте этой командой на сообщение цели.");
         }
 
         playerAccountService.updateTelegramProfile(target.getId(), StringUtil.formatTelegramDisplayName(target), target.getUserName());
         return abilityService.slow(Platform.TELEGRAM, profileId, chatId, target.getId());
     }
 
-    private String buildTransferResponse(Update update, long chatId, String[] commandParts, long profileId) {
+    private CommandResult buildTransferResponse(Update update, long chatId, String[] commandParts, long profileId) {
         if (chatId >= 0) {
-            return "Эта способность доступна только в группах.";
+            return CommandResult.single("Эта способность доступна только в группах.");
         }
 
         User target = extractReplyTarget(update);
         if (target == null) {
-            return "Ответьте этой командой на сообщение цели.";
+            return CommandResult.single("Ответьте этой командой на сообщение цели.");
         }
 
         if (commandParts.length < 2) {
-            return "Нужно указать размер перевода";
+            return CommandResult.single("Нужно указать размер перевода");
         }
 
         playerAccountService.updateTelegramProfile(target.getId(), StringUtil.formatTelegramDisplayName(target), target.getUserName());
         return abilityService.transfer(Platform.TELEGRAM, profileId, chatId, target.getId(), commandParts[1]);
     }
 
-    private String buildLeaderboardResponse(long chatId, long profileId) {
+    private CommandResult buildLeaderboardResponse(long chatId, long profileId) {
         Long scopeId = chatId < 0 ? chatId : null;
-        return leaderboardService.buildLeaderboard(Platform.TELEGRAM, profileId, scopeId);
+        return CommandResult.single(leaderboardService.buildLeaderboard(Platform.TELEGRAM, profileId, scopeId));
     }
 
-    private String buildLinkResponse(String[] commandParts, long profileId) {
-        return commandParts.length > 1
+    private CommandResult buildLinkResponse(String[] commandParts, long profileId) {
+        return CommandResult.single(commandParts.length > 1
             ? linkService.linkProfile(Platform.TELEGRAM, profileId, commandParts[1])
-            : linkService.createCode(Platform.TELEGRAM, profileId);
+            : linkService.createCode(Platform.TELEGRAM, profileId));
     }
 
-    private String buildStyleResponse(String[] commandParts, long chatId, long profileId) {
+    private CommandResult buildStyleResponse(String[] commandParts, long chatId, long profileId) {
         if (chatId >= 0) {
-            return "Стиль настраивается только в группах.";
+            return CommandResult.single("Стиль настраивается только в группах.");
         }
 
         if (commandParts.length == 1 || commandParts[1].isBlank()) {
-            return conversationStyleService.describeCurrentStyle(Platform.TELEGRAM, chatId);
+            return CommandResult.single(conversationStyleService.describeCurrentStyle(Platform.TELEGRAM, chatId));
         }
 
-        return conversationStyleService.updateTelegramStyle(chatId, profileId, commandParts[1]);
+        return CommandResult.single(conversationStyleService.updateTelegramStyle(chatId, profileId, commandParts[1]));
     }
 
     private User extractReplyTarget(Update update) {
