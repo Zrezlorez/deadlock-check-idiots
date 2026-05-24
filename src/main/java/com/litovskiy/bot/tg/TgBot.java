@@ -6,6 +6,9 @@ import com.litovskiy.service.ConversationParticipantService;
 import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.PlayerAccountService;
 import com.litovskiy.service.activity.ActivityService;
+import com.litovskiy.util.CommandMessage;
+import com.litovskiy.util.CommandResult;
+import com.litovskiy.util.MessageDelivery;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -17,10 +20,8 @@ import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.GetMe;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 @Slf4j
@@ -34,6 +35,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
     private final PlayerAccountService playerAccountService;
     private final ConversationParticipantService conversationParticipantService;
 
+    private final TgMessageSender sender;
     private final OkHttpClient okHttpClient;
     private TelegramClient telegramClient;
 
@@ -104,36 +106,24 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
             return;
         }
 
-        BotReply response = tgResponseBuilder.buildResponse(update, command, commandParts, chatId, profileId);
-        if (response == null) {
+        CommandResult response = tgResponseBuilder.buildResponse(
+            update,
+            command,
+            commandParts,
+            chatId,
+            profileId
+        );
+
+        if (response == null || response.messages().isEmpty()) {
             return;
         }
 
-        sendMessage(chatId, messageThreadId, replyToMessageId, response);
-    }
+        for (CommandMessage message : response.messages()) {
+            Integer replyTo = message.delivery() == MessageDelivery.REPLY
+                ? replyToMessageId
+                : null;
 
-    private void sendMessage(long chatId, Integer messageThreadId, Integer replyToMessageId, BotReply reply) {
-        SendMessage.SendMessageBuilder<?, ?> builder = SendMessage.builder()
-            .chatId(chatId)
-            .text(reply.getText());
-
-        if (messageThreadId != null) {
-            builder.messageThreadId(messageThreadId);
-        }
-
-        if (replyToMessageId != null) {
-            builder.replyToMessageId(replyToMessageId);
-        }
-
-        if (reply.isHtml()) {
-            builder.parseMode("HTML");
-            builder.disableWebPagePreview(true);
-        }
-
-        try {
-            telegramClient.execute(builder.build());
-        } catch (TelegramApiException e) {
-            System.out.println(e.getMessage());
+            sender.sendMessage(telegramClient, chatId, messageThreadId, replyTo, message);
         }
     }
 

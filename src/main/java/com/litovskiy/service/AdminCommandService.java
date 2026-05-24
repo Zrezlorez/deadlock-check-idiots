@@ -4,6 +4,7 @@ import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 import com.litovskiy.service.log.GameLogService;
+import com.litovskiy.util.CommandResult;
 import com.litovskiy.util.GameSetting;
 import com.litovskiy.util.SettingGroup;
 import lombok.RequiredArgsConstructor;
@@ -28,38 +29,29 @@ public class AdminCommandService {
     private final DateTimeFormatter formatter;
     private final GameLogService gameLogService;
 
-    public String handle(Platform requesterPlatform, long requesterProfileId, String rawCommand) {
+    public CommandResult handle(Platform requesterPlatform, long requesterProfileId, String rawCommand) {
         if (!adminAccessService.isAdmin(requesterPlatform, requesterProfileId)) {
-            return "Нет доступа к админке. " + adminAccessService.describeConfiguration();
+            return reply("Нет доступа к админке. " + adminAccessService.describeConfiguration());
         }
 
         String commandBody = rawCommand == null ? "" : rawCommand.trim();
         if (commandBody.isEmpty()) {
-            return help();
+            return reply(help());
         }
 
         String[] parts = commandBody.split("\\s+");
         return switch (parts[0].toLowerCase()) {
-            case "config" -> showConfig();
-            case "set" -> setConfig(parts);
-            case "reset" -> resetConfig(parts);
-            case "player" -> handlePlayer(parts);
-            case "help" -> help();
-            default -> "Неизвестная admin-команда.\n" + help();
+            case "config" -> reply(availableSettings());
+            case "set" -> reply(setConfig(parts));
+            case "reset" -> reply(resetConfig(parts));
+            case "player" -> reply(handlePlayer(parts));
+            case "help" -> reply(help());
+            default -> reply("Неизвестная admin-команда.\n" + help());
         };
     }
 
-    private String showConfig() {
-        StringBuilder builder = new StringBuilder("Текущие настройки:\n");
-        for (Map.Entry<GameSetting, String> entry : gameConfigService.listEffectiveValues().entrySet()) {
-            builder.append(entry.getKey().getKey())
-                .append(" = ")
-                .append(entry.getValue())
-                .append(" | ")
-                .append(entry.getKey().getDescription())
-                .append('\n');
-        }
-        return builder.toString().trim();
+    private CommandResult reply(String text) {
+        return CommandResult.single(text);
     }
 
     private String setConfig(String[] parts) {

@@ -22,6 +22,9 @@ public class PlayerGrowthStats {
     @Column(name = "player_id")
     private Long playerId;
 
+    @Column(name = "average_growth")
+    private double averageGrowth;
+
     @Column(name = "current_lucky_streak")
     private int currentLuckyStreak;
 

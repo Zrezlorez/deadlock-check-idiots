@@ -1,7 +1,10 @@
 package com.litovskiy.entity;
 
+import com.litovskiy.util.PlayerStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -11,6 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
@@ -62,6 +66,14 @@ public class Player {
 
     @Column(name = "pending_growth_modifier", nullable = false, columnDefinition = "double precision default 0")
     private double pendingGrowthModifier;
+
+    // можно будет в отдельную сущность перенести при новых эффектах
+    @Column(name = "status")
+    @Enumerated(EnumType.STRING)
+    private PlayerStatus status;
+
+    @Column(name = "status_until")
+    private LocalDateTime statusUntil;
 
     public Player(double size) {
         this.size = size;

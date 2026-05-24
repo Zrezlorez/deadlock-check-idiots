@@ -7,6 +7,7 @@ import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.GrowService;
 import com.litovskiy.service.LeaderboardService;
 import com.litovskiy.service.LinkService;
+import com.litovskiy.util.CommandResult;
 import lombok.RequiredArgsConstructor;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.User;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DiscordResponseBuilder {
 
-
     private final AbilityService abilityService;
     private final ConversationStyleService conversationStyleService;
     private final GrowService growService;
@@ -26,7 +26,7 @@ public class DiscordResponseBuilder {
     private final LinkService linkService;
     private final AdminCommandService adminCommandService;
 
-    public String buildResponse(SlashCommandInteractionEvent event) {
+    public CommandResult buildResponse(SlashCommandInteractionEvent event) {
         return switch (event.getName()) {
             case "grow" -> buildGrowResponse(event);
             case "fuck" -> buildFuckResponse(event);
@@ -47,19 +47,19 @@ public class DiscordResponseBuilder {
         };
     }
 
-    private String buildGrowResponse(SlashCommandInteractionEvent event) {
+    private CommandResult buildGrowResponse(SlashCommandInteractionEvent event) {
         Long scopeId = event.isFromGuild() ? event.getGuild().getIdLong() : null;
         return growService.grow(Platform.DISCORD, event.getUser().getIdLong(), scopeId, false);
     }
 
-    private String buildFuckResponse(SlashCommandInteractionEvent event) {
+    private CommandResult buildFuckResponse(SlashCommandInteractionEvent event) {
         if (!event.isFromGuild()) {
-            return "Эта способность доступна только на сервере.";
+            return CommandResult.single("Эта способность доступна только на сервере.");
         }
 
         User target = event.getOption("user", null, OptionMapping::getAsUser);
         if (target == null) {
-            return "Нужно указать цель.";
+            return CommandResult.single("Нужно указать цель.");
         }
 
         return abilityService.fuck(
@@ -70,14 +70,14 @@ public class DiscordResponseBuilder {
         );
     }
 
-    private String buildSlowResponse(SlashCommandInteractionEvent event) {
+    private CommandResult buildSlowResponse(SlashCommandInteractionEvent event) {
         if (!event.isFromGuild()) {
-            return "Эта способность доступна только на сервере.";
+            return CommandResult.single("Эта способность доступна только на сервере.");
         }
 
         User target = event.getOption("user", null, OptionMapping::getAsUser);
         if (target == null) {
-            return "Нужно указать цель.";
+            return CommandResult.single("Нужно указать цель.");
         }
 
         return abilityService.slow(
@@ -88,31 +88,31 @@ public class DiscordResponseBuilder {
         );
     }
 
-    private String buildTurtleResponse(SlashCommandInteractionEvent event) {
+    private CommandResult buildTurtleResponse(SlashCommandInteractionEvent event) {
         return abilityService.turtle(Platform.DISCORD, event.getUser().getIdLong());
     }
 
-    private String buildPrayResponse(SlashCommandInteractionEvent event) {
+    private CommandResult buildPrayResponse(SlashCommandInteractionEvent event) {
         return abilityService.pray(Platform.DISCORD, event.getUser().getIdLong());
     }
 
-    private String buildJackpotAbilityResponse(SlashCommandInteractionEvent event) {
+    private CommandResult buildJackpotAbilityResponse(SlashCommandInteractionEvent event) {
         return abilityService.jackpot(Platform.DISCORD, event.getUser().getIdLong());
     }
 
-    private String buildTransferResponse(SlashCommandInteractionEvent event) {
+    private CommandResult buildTransferResponse(SlashCommandInteractionEvent event) {
         if (!event.isFromGuild()) {
-            return "Эта способность доступна только на сервере.";
+            return CommandResult.single("Эта способность доступна только на сервере.");
         }
 
         User target = event.getOption("user", null, OptionMapping::getAsUser);
         if (target == null) {
-            return "Нужно указать цель.";
+            return CommandResult.single("Нужно указать цель.");
         }
 
         String value = event.getOption("value", null, OptionMapping::getAsString);
         if (value == null) {
-            return "Нужно указать размер перевода";
+            return CommandResult.single("Нужно указать размер перевода");
         }
 
         return abilityService.transfer(
@@ -124,33 +124,33 @@ public class DiscordResponseBuilder {
         );
     }
 
-    private String buildLeaderboardResponse(SlashCommandInteractionEvent event) {
+    private CommandResult buildLeaderboardResponse(SlashCommandInteractionEvent event) {
         Long scopeId = event.isFromGuild() ? event.getGuild().getIdLong() : null;
-        return leaderboardService.buildLeaderboard(Platform.DISCORD, event.getUser().getIdLong(), scopeId);
+        return CommandResult.single(leaderboardService.buildLeaderboard(Platform.DISCORD, event.getUser().getIdLong(), scopeId));
     }
 
-    private String buildLinkResponse(SlashCommandInteractionEvent event) {
+    private CommandResult buildLinkResponse(SlashCommandInteractionEvent event) {
         String code = event.getOption("code", null, OptionMapping::getAsString);
-        return code == null || code.isBlank()
+        return CommandResult.single(code == null || code.isBlank()
             ? linkService.createCode(Platform.DISCORD, event.getUser().getIdLong())
-            : linkService.linkProfile(Platform.DISCORD, event.getUser().getIdLong(), code);
+            : linkService.linkProfile(Platform.DISCORD, event.getUser().getIdLong(), code));
     }
 
-    private String buildStyleResponse(SlashCommandInteractionEvent event) {
+    private CommandResult buildStyleResponse(SlashCommandInteractionEvent event) {
         if (!event.isFromGuild()) {
-            return "Стиль можно менять только на сервере.";
+            return CommandResult.single("Стиль можно менять только на сервере.");
         }
 
         String styleName = event.getOption("name", null, OptionMapping::getAsString);
         long scopeId = event.getGuild().getIdLong();
         if (styleName == null || styleName.isBlank()) {
-            return conversationStyleService.describeCurrentStyle(Platform.DISCORD, scopeId);
+            return CommandResult.single(conversationStyleService.describeCurrentStyle(Platform.DISCORD, scopeId));
         }
 
         if (event.getMember() == null || !event.getMember().hasPermission(Permission.MANAGE_SERVER)) {
-            return "Менять стиль сервера могут только участники с правом Manage Server.";
+            return CommandResult.single("Менять стиль сервера могут только участники с правом Manage Server.");
         }
 
-        return conversationStyleService.updateDiscordStyle(scopeId, styleName);
+        return CommandResult.single(conversationStyleService.updateDiscordStyle(scopeId, styleName));
     }
 }
