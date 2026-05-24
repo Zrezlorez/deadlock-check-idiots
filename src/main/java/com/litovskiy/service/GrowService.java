@@ -65,7 +65,7 @@ public class GrowService {
         player.setLastGrowTime(now);
         playerDao.save(player);
 
-        return buildResultMessage(style, growthCalculation);
+        return CommandResult.single(buildResultMessage(style, growthCalculation));
     }
 
     private Optional<String> checkCooldown(Player player, LocalDateTime now) {
