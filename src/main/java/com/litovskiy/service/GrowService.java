@@ -54,7 +54,7 @@ public class GrowService {
         }
 
         GrowthStyle style = conversationStyleService.getStyle(platform, scopeId);
-        GrowthCalculation growthCalculation = calculateGrowth(platform, scopeId, player);
+        GrowthCalculation growthCalculation = calculateGrowth(platform, scopeId, player, isScheduledMessage);
 
 
         PlayerGrowthStats stat = playerGrowthStatsService.logGrowthStats(playerId, growthCalculation.outcome());
