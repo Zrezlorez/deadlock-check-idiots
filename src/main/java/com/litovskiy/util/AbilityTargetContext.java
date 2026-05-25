@@ -15,6 +15,9 @@ public record AbilityTargetContext(
         return new AbilityTargetContext(true, null, now, actor, target);
     }
 
+    public static AbilityTargetContext rejected(LocalDateTime now, Player actor, Player target, String message) {
+        return new AbilityTargetContext(false, message, now, actor, target);
+    }
     public static AbilityTargetContext rejected(String message) {
         return new AbilityTargetContext(false, message, null, null, null);
     }

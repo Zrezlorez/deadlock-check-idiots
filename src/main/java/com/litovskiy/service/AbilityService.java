@@ -156,7 +156,7 @@ public class AbilityService {
         actor.setLastAbilityTime(LocalDateTime.now(clock));
         target.setPendingGrowthModifier(newTargetGrowthModifier);
 
-        GrowthModifierLogMetadata logMetadata = new GrowthModifierLogMetadata(oldTargetGrowthModifier, newTargetGrowthModifier, growthPenalty);
+        GrowthModifierLogMetadata logMetadata = new GrowthModifierLogMetadata(oldTargetGrowthModifier, newTargetGrowthModifier, affectedGrowthModifier);
         gameLogService.logAbility(playerId, actor.getSize(), null,
             targetPlayerId, target.getSize(), null,
             Action.SLOW, logMetadata);
@@ -167,7 +167,7 @@ public class AbilityService {
         playerDao.save(target);
         playerDao.save(actor);
 
-        String result = "Вы ослабили следующий рост цели на " + toPercent(growthPenalty) + "%.";
+        String result = "Вы ослабили следующий рост цели на " + toPercent(affectedGrowthModifier) + "%.";
 
         return CommandResult.of(
             CommandMessage.reply(result),
@@ -246,7 +246,9 @@ public class AbilityService {
         double oldTargetSize = target.getSize();
 
         actor.setSize(Math.max(1.0, round(actor.getSize() - transferValue)));
-        actor.setLastAbilityTime(now);
+        if (!ignoreCooldown) {
+            actor.setLastAbilityTime(now);
+        }
 
         target.setSize(Math.max(
             1.0,
@@ -254,6 +256,7 @@ public class AbilityService {
         ));
 
         TransferLogMetadata logMetadata = new TransferLogMetadata(affectedCostPercent);
+
         gameLogService.logAbility(playerId, oldActorSize, actor.getSize(),
             targetPlayerId, oldTargetSize, target.getSize(),
             Action.TRANSFER, logMetadata);
@@ -366,7 +369,7 @@ public class AbilityService {
         GrowthModifierLogMetadata logMetadata = new GrowthModifierLogMetadata(
             oldGrowthBonus,
             actor.getPendingGrowthModifier(),
-            increaseBonus
+            affectedGrowthModifier
         );
 
         gameLogService.logAbility(playerId, actor.getSize(), null,
@@ -378,7 +381,7 @@ public class AbilityService {
         String statusMsg = playerStatusService.applyStatus(actor, stat);
 
         playerDao.save(actor);
-        String result = "Вы усилили свой следующий рост на " + toPercent(increaseBonus) + "%.";
+        String result = "Вы усилили свой следующий рост на " + toPercent(affectedGrowthModifier) + "%.";
 
         return CommandResult.of(
             CommandMessage.reply(result),
@@ -451,11 +454,11 @@ public class AbilityService {
         Player actor = playerAccountService.resolveOrCreate(platform, profileId);
 
         String cooldownMessage = checkCooldown(actor, now);
-        if (cooldownMessage != null) {
-            return AbilityTargetContext.rejected(cooldownMessage);
-        }
-
         Player target = playerAccountService.resolveOrCreate(platform, targetProfileId);
+
+        if (cooldownMessage != null) {
+            return AbilityTargetContext.rejected(now, actor, target, cooldownMessage);
+        }
 
         String validationMessage = validateTarget(platform, scopeId, actor, target);
         if (validationMessage != null) {

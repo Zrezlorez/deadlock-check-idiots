@@ -16,7 +16,6 @@ import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -61,7 +60,7 @@ public class AdminCommandService {
 
         GameSetting setting = GameSetting.fromKey(parts[1]);
         if (setting == null) {
-            return "Неизвестная настройка. Доступны: " + availableSettings();
+            return "Неизвестная настройка. Доступны: \n" + availableSettings();
         }
 
         try {
@@ -79,7 +78,7 @@ public class AdminCommandService {
 
         GameSetting setting = GameSetting.fromKey(parts[1]);
         if (setting == null) {
-            return "Неизвестная настройка. Доступны: " + availableSettings();
+            return "Неизвестная настройка. Доступны: \n" + availableSettings();
         }
 
         gameConfigService.reset(setting);
@@ -251,7 +250,7 @@ public class AdminCommandService {
             builder.append("• ")
                 .append(setting.getKey())
                 .append(" = ")
-                .append(setting.getDefaultValue())
+                .append(gameConfigService.getRawValue(setting))
                 .append("\n  ")
                 .append(setting.getDescription())
                 .append("\n");
