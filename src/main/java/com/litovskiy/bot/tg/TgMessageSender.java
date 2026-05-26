@@ -43,6 +43,10 @@ public class TgMessageSender {
             builder.replyToMessageId(actualReplyToMessageId);
         }
 
+        if (message.html()) {
+            builder.parseMode("HTML");
+            builder.disableWebPagePreview(true);
+        }
         try {
             Message sentMessage = telegramClient.execute(builder.build());
 

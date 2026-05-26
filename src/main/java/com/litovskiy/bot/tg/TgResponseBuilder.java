@@ -8,6 +8,7 @@ import com.litovskiy.service.GrowService;
 import com.litovskiy.service.LeaderboardService;
 import com.litovskiy.service.PlayerAccountService;
 import com.litovskiy.service.LinkService;
+import com.litovskiy.util.CommandMessage;
 import com.litovskiy.util.CommandResult;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
-import java.util.ArrayList;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -137,7 +136,9 @@ public class TgResponseBuilder {
 
     private CommandResult buildLeaderboardResponse(long chatId, long profileId) {
         Long scopeId = chatId < 0 ? chatId : null;
-        return CommandResult.single(leaderboardService.buildLeaderboard(Platform.TELEGRAM, profileId, scopeId));
+        return CommandResult.of(
+            CommandMessage.reply(leaderboardService.buildLeaderboard(Platform.TELEGRAM, profileId, scopeId), true)
+        );
     }
 
     private CommandResult buildLinkResponse(String[] commandParts, long profileId) {
