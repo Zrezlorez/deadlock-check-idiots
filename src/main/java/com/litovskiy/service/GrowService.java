@@ -89,7 +89,7 @@ public class GrowService {
                 profileName,
                 StringUtils.capitalize(style.getDisplayName()),
                 convertValue(player.getSize(), style),
-                player.getStatus().getName(),
+                playerStatusService.getActiveStatus(player).getName(),
                 getCooldown(player).map(StringUtil::formatDuration).orElse("Доступно сейчас"),
                 abilityService.getCooldown(player).map(StringUtil::formatDuration).orElse("Доступно сейчас"));
 

@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 
 @Slf4j
 @Service
@@ -96,7 +97,7 @@ public class TgResponseBuilder {
             return CommandResult.single("Эта способность доступна только в группах.");
         }
 
-        User target = extractReplyTarget(update);
+        User target = extractReplyTarget(update.getMessage());
         if (target == null) {
             return CommandResult.single("Ответьте этой командой на сообщение цели.");
         }
@@ -110,7 +111,7 @@ public class TgResponseBuilder {
             return CommandResult.single("Эта способность доступна только в группах.");
         }
 
-        User target = extractReplyTarget(update);
+        User target = extractReplyTarget(update.getMessage());
         if (target == null) {
             return CommandResult.single("Ответьте этой командой на сообщение цели.");
         }
@@ -124,7 +125,7 @@ public class TgResponseBuilder {
             return CommandResult.single("Эта способность доступна только в группах.");
         }
 
-        User target = extractReplyTarget(update);
+        User target = extractReplyTarget(update.getMessage());
         if (target == null) {
             return CommandResult.single("Ответьте этой командой на сообщение цели.");
         }
@@ -163,9 +164,9 @@ public class TgResponseBuilder {
     }
 
     private CommandResult buildProfileResponse(Update update, long chatId, long profileId) {
-        User target = extractReplyTarget(update);
+        User target = extractReplyTarget(update.getMessage());
         if (target != null && target.getIsBot()) {
-            return CommandResult.empty();
+            return CommandResult.single("Бот нищий, у него нет профиля");
         }
 
         long targetProfileId = target == null
@@ -175,10 +176,12 @@ public class TgResponseBuilder {
         return growService.buildProfileResponse(Platform.TELEGRAM, targetProfileId, chatId);
     }
 
-    private User extractReplyTarget(Update update) {
-        if (update.getMessage() == null || update.getMessage().getReplyToMessage() == null) {
+    private User extractReplyTarget(Message message) {
+        Message replyMessage = message.getReplyToMessage();
+        if (replyMessage == null
+            || replyMessage.getMessageId().equals(replyMessage.getMessageThreadId())) {
             return null;
         }
-        return update.getMessage().getReplyToMessage().getFrom();
+        return replyMessage.getFrom();
     }
 }
