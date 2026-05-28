@@ -1,6 +1,7 @@
 package com.litovskiy.util;
 
 import org.telegram.telegrambots.meta.api.objects.User;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;

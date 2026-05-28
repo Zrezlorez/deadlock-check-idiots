@@ -1,5 +1,9 @@
 package com.litovskiy.service;
 
+import com.litovskiy.config.properties.AbilityProperties;
+import com.litovskiy.entity.GrowthStyle;
+import com.litovskiy.entity.Platform;
+import com.litovskiy.entity.Player;
 import com.litovskiy.entity.PlayerBehaviorStats;
 import com.litovskiy.log.Action;
 import com.litovskiy.log.metadata.FuckLogMetadata;
@@ -9,24 +13,20 @@ import com.litovskiy.log.metadata.PrayLogMetadata;
 import com.litovskiy.log.metadata.TransferLogMetadata;
 import com.litovskiy.repository.ConversationParticipantRepository;
 import com.litovskiy.service.data.PlayerService;
-import com.litovskiy.entity.GrowthStyle;
-import com.litovskiy.entity.Platform;
-import com.litovskiy.entity.Player;
+import com.litovskiy.service.log.GameLogService;
 import com.litovskiy.service.log.PlayerBehaviorStatService;
 import com.litovskiy.util.AbilitySelfContext;
 import com.litovskiy.util.AbilityTargetContext;
-import com.litovskiy.service.log.GameLogService;
 import com.litovskiy.util.CommandBlockReason;
 import com.litovskiy.util.CommandMessage;
 import com.litovskiy.util.CommandResult;
-import com.litovskiy.util.GameSetting;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 
 import static com.litovskiy.util.StringUtil.clamp;
 import static com.litovskiy.util.StringUtil.formatDuration;
@@ -39,12 +39,12 @@ public class AbilityService {
     private final PlayerService playerDao;
     private final PlayerAccountService playerAccountService;
     private final ConversationParticipantRepository conversationParticipantRepository;
-    private final GameConfigService gameConfigService;
     private final GameLogService gameLogService;
     private final ConversationStyleService conversationStyleService;
     private final PlayerBehaviorStatService playerBehaviorStatService;
     private final PlayerStatusService playerStatusService;
     private final Clock clock;
+    private final AbilityProperties abilityProperties;
 
 
     public CommandResult fuck(Platform platform, long playerId, Long scopeId, long targetPlayerId) {
@@ -75,9 +75,9 @@ public class AbilityService {
 
         GrowthStyle growthStyle = conversationStyleService.getStyle(platform, scopeId);
 
-        double costPercent = gameConfigService.getDouble(GameSetting.FUCK_COST_PERCENT);
-        double failBonus = gameConfigService.getDouble(GameSetting.FUCK_FAIL_CHANCE_PENALTY);
-        double maxFailChance = gameConfigService.getDouble(GameSetting.MAX_PENDING_FAIL_CHANCE);
+        double costPercent = abilityProperties.getFuckCostPercent();
+        double failBonus = abilityProperties.getFuckFailChancePenalty();
+        double maxFailChance = abilityProperties.getMaxPendingFailChance();
 
         double cost = round(actor.getSize() * costPercent);
         double oldActorSize = actor.getSize();
@@ -141,9 +141,9 @@ public class AbilityService {
             return CommandResult.single(blockReason.message());
         }
 
-        double growthPenalty = gameConfigService.getDouble(GameSetting.SLOW_GROWTH_PENALTY);
-        double minGrowth = gameConfigService.getDouble(GameSetting.MIN_PENDING_GROWTH);
-        double maxGrowth = gameConfigService.getDouble(GameSetting.MAX_PENDING_GROWTH);
+        double growthPenalty = abilityProperties.getSlowGrowthPenalty();
+        double minGrowth = abilityProperties.getMinPendingGrowth();
+        double maxGrowth = abilityProperties.getMaxPendingGrowth();
 
         double affectedGrowthModifier = playerStatusService.modifyGrowthModifier(actor, target, Action.SLOW, growthPenalty);
 
@@ -237,7 +237,7 @@ public class AbilityService {
             name = target.getDiscordTag();
         }
 
-        double costPercent = gameConfigService.getDouble(GameSetting.ABILITY_TRANSFER_COMMISSION);
+        double costPercent = abilityProperties.getTransferCommission();
 
         double affectedCostPercent = playerStatusService.modifyTransferCommission(actor, costPercent);
         double cost = round(transferValue * affectedCostPercent);
@@ -291,11 +291,11 @@ public class AbilityService {
             return CommandResult.single(blockReason.message());
         }
 
-        double failBonus = gameConfigService.getDouble(GameSetting.JACKPOT_FAIL_CHANCE);
-        double critBonus = gameConfigService.getDouble(GameSetting.JACKPOT_CRIT_CHANCE);
+        double failBonus = abilityProperties.getJackpotFailChance();
+        double critBonus = abilityProperties.getJackpotCritChance();
 
-        double maxCritChance = gameConfigService.getDouble(GameSetting.MAX_PENDING_CRIT_CHANCE);
-        double maxFailChance = gameConfigService.getDouble(GameSetting.MAX_PENDING_FAIL_CHANCE);
+        double maxCritChance = abilityProperties.getMaxPendingCritChance();
+        double maxFailChance = abilityProperties.getMaxPendingFailChance();
 
         double oldCritChance = actor.getPendingCritChanceModifier();
         double newCritChance = round(oldCritChance + critBonus);
@@ -352,8 +352,8 @@ public class AbilityService {
             return CommandResult.single(blockReason.message());
         }
 
-        double increaseBonus = gameConfigService.getDouble(GameSetting.TURTLE_GROWTH_BONUS);
-        double maxGrowthBonus = gameConfigService.getDouble(GameSetting.MAX_PENDING_GROWTH);
+        double increaseBonus = abilityProperties.getTurtleGrowthBonus();
+        double maxGrowthBonus = abilityProperties.getMaxPendingGrowth();
 
         double affectedGrowthModifier = playerStatusService.modifyGrowthModifier(actor, null, Action.TURTLE, increaseBonus);
 
@@ -404,7 +404,7 @@ public class AbilityService {
             return CommandResult.single(blockReason.message());
         }
 
-        double increaseBonus = gameConfigService.getDouble(GameSetting.PRAY_FAIL_BONUS);
+        double increaseBonus = abilityProperties.getPrayFailBonus();
 
         double oldFailChance = actor.getPendingFailChanceModifier();
         actor.setLastAbilityTime(LocalDateTime.now(clock));
@@ -421,7 +421,7 @@ public class AbilityService {
             null, null, null,
             Action.PRAY, logMetadata);
 
-        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.TURTLE);
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.PRAY);
         String statusMsg = playerStatusService.applyStatus(actor, stat);
 
         playerDao.save(actor);
@@ -433,17 +433,29 @@ public class AbilityService {
         );
     }
 
+    public Optional<Duration> getCooldown(Player player) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime lastAbilityTime = player.getLastAbilityTime();
+        if (lastAbilityTime == null) {
+            return Optional.empty();
+        }
+
+        LocalDateTime nextAllowed = lastAbilityTime.plus(abilityProperties.getAbilityCooldown());
+        if (!now.isBefore(nextAllowed)) {
+            return Optional.empty();
+        }
+
+        return Optional.of(Duration.between(now, nextAllowed));
+    }
+
     private AbilitySelfContext prepareSelfAbility(Platform platform, long profileId) {
         LocalDateTime now = LocalDateTime.now(clock);
 
         Player player = playerAccountService.resolveOrCreate(platform, profileId);
 
-        String cooldownMessage = checkCooldown(player, now);
-        if (cooldownMessage != null) {
-            return AbilitySelfContext.rejected(cooldownMessage);
-        }
+        Optional<String> cooldownMessage = getCooldownString(player);
+        return cooldownMessage.map(AbilitySelfContext::rejected).orElseGet(() -> AbilitySelfContext.success(now, player));
 
-        return AbilitySelfContext.success(now, player);
     }
 
     private AbilityTargetContext prepareTargetAbility(Platform platform, long profileId,
@@ -453,11 +465,11 @@ public class AbilityService {
 
         Player actor = playerAccountService.resolveOrCreate(platform, profileId);
 
-        String cooldownMessage = checkCooldown(actor, now);
+        Optional<String> cooldownMessage = getCooldownString(actor);
         Player target = playerAccountService.resolveOrCreate(platform, targetProfileId);
 
-        if (cooldownMessage != null) {
-            return AbilityTargetContext.rejected(now, actor, target, cooldownMessage);
+        if (cooldownMessage.isPresent()) {
+            return AbilityTargetContext.rejected(now, actor, target, cooldownMessage.get());
         }
 
         String validationMessage = validateTarget(platform, scopeId, actor, target);
@@ -480,21 +492,8 @@ public class AbilityService {
         return null;
     }
 
-    private String checkCooldown(Player player, LocalDateTime now) {
-        LocalDateTime lastAbilityTime = player.getLastAbilityTime();
-        if (lastAbilityTime == null) {
-            return null;
-        }
-
-        int timeRange = gameConfigService.getInt(GameSetting.ABILITY_COOLDOWN_RANGE);
-        ChronoUnit timeUnit = gameConfigService.getChronoUnit(GameSetting.ABILITY_COOLDOWN_UNIT);
-        LocalDateTime nextAllowed = lastAbilityTime.plus(timeRange, timeUnit);
-        if (!now.isBefore(nextAllowed)) {
-            return null;
-        }
-
-        Duration duration = Duration.between(now, nextAllowed);
-        return "Способность еще на перезарядке. Доступно через: " + formatDuration(duration);
+    private Optional<String> getCooldownString(Player player) {
+        return getCooldown(player).map(it -> "Способность еще на перезарядке. Доступно через: " + formatDuration(it));
     }
 
     private int toPercent(double value) {

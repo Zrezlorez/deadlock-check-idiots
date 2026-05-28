@@ -3,6 +3,7 @@ package com.litovskiy.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import java.time.Clock;
 import java.time.format.DateTimeFormatter;
 import java.util.Random;

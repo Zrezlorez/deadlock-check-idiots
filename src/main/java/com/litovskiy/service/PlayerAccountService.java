@@ -1,9 +1,9 @@
 package com.litovskiy.service;
 
-import com.litovskiy.service.data.PlayerService;
+import com.litovskiy.config.properties.GrowthProperties;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
-import com.litovskiy.util.GameSetting;
+import com.litovskiy.service.data.PlayerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,7 +16,7 @@ import java.util.Objects;
 public class PlayerAccountService {
 
     private final PlayerService playerService;
-    private final GameConfigService gameConfigService;
+    private final GrowthProperties growthProperties;
 
     public Player resolveOrCreate(Platform platform, long profileId) {
         Player player = playerService.findByPlatform(platform, profileId);
@@ -24,7 +24,7 @@ public class PlayerAccountService {
             return player;
         }
 
-        Player newPlayer = new Player(gameConfigService.getDouble(GameSetting.START_SIZE));
+        Player newPlayer = new Player(growthProperties.getStartSize());
         if (platform == Platform.TELEGRAM) {
             newPlayer.setTelegramChatId(profileId);
         } else if (platform == Platform.DISCORD) {

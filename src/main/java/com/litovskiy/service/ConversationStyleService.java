@@ -1,9 +1,9 @@
 package com.litovskiy.service;
 
-import com.litovskiy.repository.ConversationSettingsRepository;
 import com.litovskiy.entity.ConversationSettings;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
+import com.litovskiy.repository.ConversationSettingsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
