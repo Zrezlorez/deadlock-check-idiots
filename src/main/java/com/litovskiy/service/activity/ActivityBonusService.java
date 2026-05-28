@@ -1,15 +1,15 @@
 package com.litovskiy.service.activity;
 
+import com.litovskiy.config.properties.ActivityProperties;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 import com.litovskiy.entity.VoiceSession;
 import com.litovskiy.repository.VoiceSessionRepository;
-import com.litovskiy.service.GameConfigService;
-import com.litovskiy.util.GameSetting;
 import com.litovskiy.service.PlayerAccountService;
 import com.litovskiy.service.data.ActivityStatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -28,15 +28,15 @@ public class ActivityBonusService {
 
     private final VoiceSessionRepository voiceSessionRepository;
     private final PlayerAccountService playerAccountService;
-    private final GameConfigService gameConfigService;
     private final ActivityStatService activityStatService;
     private final Clock clock;
+    private final ActivityProperties activityProperties;
 
     public double getGrowthBonusMultiplier(Platform platform, long profileId, Long scopeId) {
         Player player = playerAccountService.resolveOrCreate(platform, profileId);
-        int lookbackDays = gameConfigService.getInt(GameSetting.ACTIVITY_LOOKBACK_DAYS);
-        double maxGrowthBonus = gameConfigService.getDouble(GameSetting.ACTIVITY_MAX_GROWTH_BONUS);
-        LocalDate fromDate = LocalDate.now(clock).minusDays(lookbackDays - 1L);
+        int lookBackDays = activityProperties.getLookBackDays();
+        double maxGrowthBonus = activityProperties.getMaxGrowthBonus();
+        LocalDate fromDate = LocalDate.now(clock).minusDays(lookBackDays - 1L);
 
         double telegramShare = getPlatformShare(player.getId(), Platform.TELEGRAM, fromDate,
             platform == Platform.TELEGRAM ? scopeId : null);

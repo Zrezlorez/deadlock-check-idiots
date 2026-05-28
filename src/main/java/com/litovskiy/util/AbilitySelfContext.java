@@ -1,6 +1,7 @@
 package com.litovskiy.util;
 
 import com.litovskiy.entity.Player;
+
 import java.time.LocalDateTime;
 
 public record AbilitySelfContext(
