@@ -1,15 +1,15 @@
 package com.litovskiy.bot.tg;
 
 import com.litovskiy.entity.Platform;
-import com.litovskiy.service.AbilityService;
+import com.litovskiy.service.ability.AbilityService;
 import com.litovskiy.service.AdminCommandService;
 import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.GrowService;
 import com.litovskiy.service.LeaderboardService;
 import com.litovskiy.service.PlayerAccountService;
 import com.litovskiy.service.LinkService;
-import com.litovskiy.util.CommandMessage;
-import com.litovskiy.util.CommandResult;
+import com.litovskiy.bot.CommandMessage;
+import com.litovskiy.bot.CommandResult;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

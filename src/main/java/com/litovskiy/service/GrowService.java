@@ -1,8 +1,10 @@
 package com.litovskiy.service;
 
 import com.litovskiy.entity.PlayerGrowthStats;
-import com.litovskiy.util.CommandResult;
-import com.litovskiy.util.GameSetting;
+import com.litovskiy.service.ability.PlayerStatusService;
+import com.litovskiy.service.data.GameConfigService;
+import com.litovskiy.bot.CommandResult;
+import com.litovskiy.service.data.GameSetting;
 import com.litovskiy.service.activity.ActivityService;
 import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.GrowthStyle;

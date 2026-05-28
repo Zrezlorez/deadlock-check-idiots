@@ -1,4 +1,4 @@
-package com.litovskiy.util;
+package com.litovskiy.service.ability;
 
 import com.litovskiy.entity.Player;
 import java.time.LocalDateTime;

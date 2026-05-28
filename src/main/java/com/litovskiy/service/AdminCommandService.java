@@ -1,11 +1,13 @@
 package com.litovskiy.service;
 
+import com.litovskiy.service.data.AdminAccessService;
+import com.litovskiy.service.data.GameConfigService;
 import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 import com.litovskiy.service.log.GameLogService;
-import com.litovskiy.util.CommandResult;
-import com.litovskiy.util.GameSetting;
+import com.litovskiy.bot.CommandResult;
+import com.litovskiy.service.data.GameSetting;
 import com.litovskiy.util.SettingGroup;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

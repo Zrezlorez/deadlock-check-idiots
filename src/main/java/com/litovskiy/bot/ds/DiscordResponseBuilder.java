@@ -1,13 +1,13 @@
 package com.litovskiy.bot.ds;
 
 import com.litovskiy.entity.Platform;
-import com.litovskiy.service.AbilityService;
+import com.litovskiy.service.ability.AbilityService;
 import com.litovskiy.service.AdminCommandService;
 import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.GrowService;
 import com.litovskiy.service.LeaderboardService;
 import com.litovskiy.service.LinkService;
-import com.litovskiy.util.CommandResult;
+import com.litovskiy.bot.CommandResult;
 import lombok.RequiredArgsConstructor;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.User;

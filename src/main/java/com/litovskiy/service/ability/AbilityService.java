@@ -1,4 +1,4 @@
-package com.litovskiy.service;
+package com.litovskiy.service.ability;
 
 import com.litovskiy.entity.PlayerBehaviorStats;
 import com.litovskiy.log.Action;
@@ -8,18 +8,19 @@ import com.litovskiy.log.metadata.JackpotLogMetadata;
 import com.litovskiy.log.metadata.PrayLogMetadata;
 import com.litovskiy.log.metadata.TransferLogMetadata;
 import com.litovskiy.repository.ConversationParticipantRepository;
+import com.litovskiy.service.ConversationStyleService;
+import com.litovskiy.service.PlayerAccountService;
+import com.litovskiy.service.data.GameConfigService;
 import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 import com.litovskiy.service.log.PlayerBehaviorStatService;
-import com.litovskiy.util.AbilitySelfContext;
-import com.litovskiy.util.AbilityTargetContext;
 import com.litovskiy.service.log.GameLogService;
 import com.litovskiy.util.CommandBlockReason;
-import com.litovskiy.util.CommandMessage;
-import com.litovskiy.util.CommandResult;
-import com.litovskiy.util.GameSetting;
+import com.litovskiy.bot.CommandMessage;
+import com.litovskiy.bot.CommandResult;
+import com.litovskiy.service.data.GameSetting;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -30,6 +31,7 @@ import java.time.temporal.ChronoUnit;
 
 import static com.litovskiy.util.StringUtil.clamp;
 import static com.litovskiy.util.StringUtil.formatDuration;
+import static com.litovskiy.util.StringUtil.getKeyboard;
 import static com.litovskiy.util.StringUtil.round;
 
 @Component
@@ -109,9 +111,11 @@ public class AbilityService {
         String result = "Вы усилили шанс неудачи цели на " + toPercent(failBonus)
             + "% за " + GrowthStyle.convertValue(cost, growthStyle) + ". Следующая попытка роста у цели будет опаснее.";
 
+        String statusMsg = "test";
+
         return CommandResult.of(
-            CommandMessage.reply(result)
-            //CommandMessage.broadcast(statusMsg)
+            CommandMessage.reply(result),
+            CommandMessage.broadcast(statusMsg, getKeyboard())
         );
     }
 

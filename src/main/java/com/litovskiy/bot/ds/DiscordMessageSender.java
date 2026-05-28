@@ -1,15 +1,14 @@
 package com.litovskiy.bot.ds;
 
-import com.litovskiy.util.CommandMessage;
-import com.litovskiy.util.CommandResult;
-import com.litovskiy.util.MessageDelivery;
+import com.litovskiy.bot.CommandMessage;
+import com.litovskiy.bot.CommandResult;
+import com.litovskiy.bot.MessageDelivery;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -23,11 +22,11 @@ public class DiscordMessageSender {
         List<CommandMessage> messages = result.messages();
         CommandMessage firstMessage = messages.get(0);
 
-        event.reply(firstMessage.text()).queue(
+        event.reply(firstMessage.getText()).queue(
             hook -> {
-                if (firstMessage.deleteAfterSend()) {
-                    hook.deleteOriginal().queueAfter(30, TimeUnit.SECONDS);
-                }
+//                if (firstMessage.deleteAfterSend()) {
+//                    hook.deleteOriginal().queueAfter(30, TimeUnit.SECONDS);
+//                }
 
                 for (int i = 1; i < messages.size(); i++) {
                     sendAdditionalMessage(event, hook, messages.get(i));
@@ -42,30 +41,30 @@ public class DiscordMessageSender {
         InteractionHook hook,
         CommandMessage message
     ) {
-        if (message == null || message.text() == null || message.text().isBlank()) {
+        if (message == null || message.getText() == null || message.getText().isBlank()) {
             return;
         }
 
-        if (message.delivery() == MessageDelivery.BROADCAST) {
+        if (message.getDelivery() == MessageDelivery.BROADCAST) {
             event.getChannel()
-                .sendMessage(message.text())
+                .sendMessage(message.getText())
                 .queue(
                     sentMessage -> {
-                        if (message.deleteAfterSend()) {
-                            sentMessage.delete().queueAfter(30, TimeUnit.SECONDS);
-                        }
+//                        if (message.deleteAfterSend()) {
+//                            sentMessage.delete().queueAfter(30, TimeUnit.SECONDS);
+//                        }
                     },
                     error -> log.warn("Failed to send Discord broadcast message. command={}", event.getName(), error)
                 );
             return;
         }
 
-        hook.sendMessage(message.text())
+        hook.sendMessage(message.getText())
             .queue(
                 sentMessage -> {
-                    if (message.deleteAfterSend()) {
-                        sentMessage.delete().queueAfter(30, TimeUnit.SECONDS);
-                    }
+//                    if (message.deleteAfterSend()) {
+//                        sentMessage.delete().queueAfter(30, TimeUnit.SECONDS);
+//                    }
                 },
                 error -> log.warn("Failed to send Discord follow-up message. command={}", event.getName(), error)
             );

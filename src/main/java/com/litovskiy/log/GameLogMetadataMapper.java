@@ -1,9 +1,7 @@
-package com.litovskiy.service.log;
+package com.litovskiy.log;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.litovskiy.log.Action;
-import com.litovskiy.log.LogMetadata;
 import com.litovskiy.log.metadata.EmptyLogMetadata;
 import com.litovskiy.log.metadata.GrowLogMetadata;
 import com.litovskiy.log.metadata.JackpotLogMetadata;

@@ -1,12 +1,11 @@
 package com.litovskiy.bot.tg;
 
-import com.litovskiy.util.CommandMessage;
-import com.litovskiy.util.MessageDelivery;
+import com.litovskiy.bot.CommandMessage;
+import com.litovskiy.bot.MessageDelivery;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
-import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 import java.util.concurrent.CompletableFuture;
@@ -23,17 +22,17 @@ public class TgMessageSender {
         Integer replyToMessageId,
         CommandMessage message
     ) {
-        if (message == null || message.text() == null || message.text().isBlank()) {
+        if (message == null || message.getText() == null || message.getText().isBlank()) {
             return;
         }
 
-        Integer actualReplyToMessageId = message.delivery() == MessageDelivery.REPLY
+        Integer actualReplyToMessageId = message.getDelivery() == MessageDelivery.REPLY
             ? replyToMessageId
             : null;
 
         SendMessage.SendMessageBuilder builder = SendMessage.builder()
             .chatId(chatId)
-            .text(message.text());
+            .text(message.getText());
 
         if (messageThreadId != null) {
             builder.messageThreadId(messageThreadId);
@@ -43,16 +42,18 @@ public class TgMessageSender {
             builder.replyToMessageId(actualReplyToMessageId);
         }
 
-        if (message.html()) {
+        if (message.getHtml()) {
             builder.parseMode("HTML");
             builder.disableWebPagePreview(true);
         }
-        try {
-            Message sentMessage = telegramClient.execute(builder.build());
 
-            if (message.deleteAfterSend() && sentMessage != null) {
-                scheduleDelete(telegramClient, chatId, sentMessage.getMessageId());
-            }
+        if (message.getKeyboard() != null) {
+            builder.replyMarkup(message.getKeyboard());
+        }
+
+        try {
+            telegramClient.execute(builder.build());
+
         } catch (TelegramApiException e) {
             log.warn("Failed to send Telegram message. chatId={}, replyTo={}", chatId, actualReplyToMessageId, e);
         }

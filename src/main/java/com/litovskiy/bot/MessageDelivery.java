@@ -1,4 +1,4 @@
-package com.litovskiy.util;
+package com.litovskiy.bot;
 
 public enum MessageDelivery {
     REPLY,

@@ -1,5 +1,6 @@
-package com.litovskiy.util;
+package com.litovskiy.service.data;
 
+import com.litovskiy.util.SettingGroup;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import java.time.temporal.ChronoUnit;

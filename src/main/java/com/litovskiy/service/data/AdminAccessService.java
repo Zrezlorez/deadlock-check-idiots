@@ -1,4 +1,4 @@
-package com.litovskiy.service;
+package com.litovskiy.service.data;
 
 import com.litovskiy.entity.Platform;
 import org.springframework.beans.factory.annotation.Value;

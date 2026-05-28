@@ -1,9 +1,10 @@
-package com.litovskiy.service;
+package com.litovskiy.service.data;
 
 import com.litovskiy.entity.ConversationParticipant;
 import com.litovskiy.repository.ConversationParticipantRepository;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import com.litovskiy.service.PlayerAccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

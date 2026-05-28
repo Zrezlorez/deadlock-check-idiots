@@ -1,6 +1,6 @@
 package com.litovskiy.entity;
 
-import com.litovskiy.util.PlayerStatus;
+import com.litovskiy.service.ability.PlayerStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -14,7 +14,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
