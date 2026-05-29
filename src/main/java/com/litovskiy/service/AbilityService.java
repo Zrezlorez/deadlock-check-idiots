@@ -78,18 +78,19 @@ public class AbilityService {
         double costPercent = abilityProperties.getFuckCostPercent();
         double failBonus = abilityProperties.getFuckFailChancePenalty();
         double maxFailChance = abilityProperties.getMaxPendingFailChance();
+        double modifiedFailChance = playerStatusService.modifyFailChance(actor, target, failBonus);
 
         double cost = round(actor.getSize() * costPercent);
         double oldActorSize = actor.getSize();
 
-        if (actor.getSize() < target.getSize() * 0.25) {
-            return CommandResult.single("Вы не можете атаковать игрока, если ваш рост меньше чем 25% от его размера");
+        if (modifiedFailChance == -1) {
+            return CommandResult.single("Вы не можете атаковать игрока, если ваш рост меньше чем 10% от его размера");
         }
 
         actor.setSize(Math.max(1.0, round(actor.getSize() - cost)));
         actor.setLastAbilityTime(LocalDateTime.now(clock));
 
-        double modifiedFailChance = playerStatusService.modifyFailChance(actor, target, failBonus);
+
         double oldTargetFailChance = target.getPendingFailChanceModifier();
         target.setPendingFailChanceModifier(Math.min(
             maxFailChance,

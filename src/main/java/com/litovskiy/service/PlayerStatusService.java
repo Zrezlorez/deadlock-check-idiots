@@ -112,6 +112,10 @@ public class PlayerStatusService {
             return value * 2;
         }
 
+        if (actor.getSize() < target.getSize() * 0.1) {
+            return -1;
+        }
+
         return value;
     }
 
@@ -131,11 +135,13 @@ public class PlayerStatusService {
             case LUDOMANIA -> context
                 .withFailChanceModifier(0.05)
                 .withCritChanceModifier(0.05)
-                .withCritMultiplier(context.critMultiplier() + 45)
+                .withCritMultiplier(context.critMultiplier() + 42.25)
                 .withFailPercent(0.4);
             case SHAO_LIN -> context
                 .withFailChanceModifier(context.failChance() - 0.10)
-                .withCritChanceModifier(context.critChance() - 0.10);
+                .withCritChanceModifier(context.critChance() - 0.10)
+                .withGrowthModifier(context.growthModifier() == 0.28 ? 0.5 : context.growthModifier());
+
             case CRUD -> context
                 .withGrowthModifier(-0.25);
             default -> context;
