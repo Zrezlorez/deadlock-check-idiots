@@ -72,6 +72,7 @@ public class DiscordBot extends ListenerAdapter {
                     .addOption(OptionType.STRING, "code", "Код из другого бота", false),
                 Commands.slash("style", "Посмотреть или изменить стиль роста на сервере")
                     .addOption(OptionType.STRING, "name", "Название стиля", false),
+                Commands.slash("profile", "Посмотреть профиль (свой или другого игрока)"),
                 Commands.slash("admin", "Админ-команды")
                     .addOption(OptionType.STRING, "command", "Например: config, player show telegram @name, player show discord user#1234", false)
             )
