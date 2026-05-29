@@ -20,6 +20,7 @@ import com.litovskiy.util.AbilityTargetContext;
 import com.litovskiy.util.CommandBlockReason;
 import com.litovskiy.util.CommandMessage;
 import com.litovskiy.util.CommandResult;
+import com.litovskiy.util.PlayerStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -78,18 +79,19 @@ public class AbilityService {
         double costPercent = abilityProperties.getFuckCostPercent();
         double failBonus = abilityProperties.getFuckFailChancePenalty();
         double maxFailChance = abilityProperties.getMaxPendingFailChance();
+        double modifiedFailChance = playerStatusService.modifyFailChance(actor, target, failBonus);
 
         double cost = round(actor.getSize() * costPercent);
         double oldActorSize = actor.getSize();
 
-        if (actor.getSize() < target.getSize() * 0.25) {
-            return CommandResult.single("Вы не можете атаковать игрока, если ваш рост меньше чем 25% от его размера");
+        if (modifiedFailChance == -1) {
+            return CommandResult.single("Вы не можете атаковать игрока, если ваш рост меньше чем 10% от его размера");
         }
 
         actor.setSize(Math.max(1.0, round(actor.getSize() - cost)));
         actor.setLastAbilityTime(LocalDateTime.now(clock));
 
-        double modifiedFailChance = playerStatusService.modifyFailChance(actor, target, failBonus);
+
         double oldTargetFailChance = target.getPendingFailChanceModifier();
         target.setPendingFailChanceModifier(Math.min(
             maxFailChance,
@@ -162,7 +164,7 @@ public class AbilityService {
             Action.SLOW, logMetadata);
 
         PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.SLOW);
-        String statusMsg = playerStatusService.applyStatus(actor, stat);
+        PlayerStatus status = playerStatusService.applyStatus(actor, stat);
 
         playerDao.save(target);
         playerDao.save(actor);
@@ -171,7 +173,7 @@ public class AbilityService {
 
         return CommandResult.of(
             CommandMessage.reply(result),
-            CommandMessage.broadcast(statusMsg)
+            CommandMessage.broadcast(status.getMessage())
         );
     }
 
@@ -262,7 +264,7 @@ public class AbilityService {
             Action.TRANSFER, logMetadata);
 
         PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.TRANSFER);
-        String statusMsg = playerStatusService.applyStatus(actor, stat);
+        PlayerStatus status = playerStatusService.applyStatus(actor, stat);
 
         playerDao.save(target);
         playerDao.save(actor);
@@ -272,7 +274,7 @@ public class AbilityService {
 
         return CommandResult.of(
             CommandMessage.reply(result),
-            CommandMessage.broadcast(statusMsg)
+            CommandMessage.broadcast(status.getMessage())
         );
     }
 
@@ -325,7 +327,7 @@ public class AbilityService {
             Action.JACKPOT, logMetadata);
 
         PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.JACKPOT);
-        String statusMsg = playerStatusService.applyStatus(actor, stat);
+        PlayerStatus status = playerStatusService.applyStatus(actor, stat);
 
         playerDao.save(actor);
         String result = "Вы увеличили шанс джекпота на " + toPercent(critBonus) + "% и повысили шанс неудачи на " + toPercent(failBonus)
@@ -333,7 +335,7 @@ public class AbilityService {
 
         return CommandResult.of(
             CommandMessage.reply(result),
-            CommandMessage.broadcast(statusMsg)
+            CommandMessage.broadcast(status.getMessage())
         );
     }
 
@@ -354,11 +356,13 @@ public class AbilityService {
 
         double increaseBonus = abilityProperties.getTurtleGrowthBonus();
         double maxGrowthBonus = abilityProperties.getMaxPendingGrowth();
-
-        double affectedGrowthModifier = playerStatusService.modifyGrowthModifier(actor, null, Action.TURTLE, increaseBonus);
-
         double oldGrowthBonus = actor.getPendingGrowthModifier();
 
+
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.TURTLE);
+        PlayerStatus status = playerStatusService.applyStatus(actor, stat);
+
+        double affectedGrowthModifier = playerStatusService.modifyGrowthModifier(actor, null, Action.TURTLE, increaseBonus);
 
         actor.setLastAbilityTime(LocalDateTime.now(clock));
         actor.setPendingGrowthModifier(Math.min(
@@ -377,15 +381,12 @@ public class AbilityService {
             Action.TURTLE, logMetadata);
 
 
-        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.TURTLE);
-        String statusMsg = playerStatusService.applyStatus(actor, stat);
-
         playerDao.save(actor);
         String result = "Вы усилили свой следующий рост на " + toPercent(affectedGrowthModifier) + "%.";
 
         return CommandResult.of(
             CommandMessage.reply(result),
-            CommandMessage.broadcast(statusMsg)
+            CommandMessage.broadcast(status.getMessage())
         );
     }
 
@@ -422,14 +423,14 @@ public class AbilityService {
             Action.PRAY, logMetadata);
 
         PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.PRAY);
-        String statusMsg = playerStatusService.applyStatus(actor, stat);
+        PlayerStatus status = playerStatusService.applyStatus(actor, stat);
 
         playerDao.save(actor);
         String result = "Вы уменьшили шанс неудачи на " + toPercent(increaseBonus) + "% при следующем росте.";
 
         return CommandResult.of(
             CommandMessage.reply(result),
-            CommandMessage.broadcast(statusMsg)
+            CommandMessage.broadcast(status.getMessage())
         );
     }
 

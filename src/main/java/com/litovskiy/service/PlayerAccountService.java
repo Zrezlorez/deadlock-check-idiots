@@ -45,7 +45,7 @@ public class PlayerAccountService {
 
         String normalizedUsername = normalizeTelegramUsername(username);
         if (!Objects.equals(player.getTelegramUsername(), normalizedUsername)) {
-            player.setTelegramUsername(normalizedUsername);
+            player.setTelegramUsername(normalizedUsername.toLowerCase());
             changed = true;
         }
 
