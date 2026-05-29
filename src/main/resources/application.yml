@@ -1,0 +1,75 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+telegram:
+  token: ${TELEGRAM_TOKEN}
+
+discord:
+  token: ${DISCORD_TOKEN}
+
+admin:
+  telegram-admin-ids: ${ADMIN_TELEGRAM_USER_IDS}
+  discord-admin-ids: ${ADMIN_DISCORD_USER_IDS}
+
+proxy:
+  enabled: ${PROXY_ENABLED}
+  host: ${PROXY_HOST}
+  port: ${PROXY_PORT}
+  username: ${PROXY_USERNAME}
+  password: ${PROXY_PASSWORD}
+
+cloud-config:
+  enabled: ${CLOUD_CONFIG_ENABLED}
+  github:
+    owner: ${GITHUB_OWNER}
+    repo: ${GITHUB_REPO}
+    path: ${GITHUB_PATH}
+    ref: ${GITHUB_REF}
+    token: ${GITHUB_TOKEN}
+
+#logging.level.org.telegram.telegrambots.longpolling.BotSession: OFF
+
+
+game:
+  leaderboard-limit: 5
+  log-page-size: 5
+  ability:
+    ability-cooldown: 8h
+    jackpot-fail-chance: 0.15
+    jackpot-crit-chance: 0.4
+    pray-fail-bonus: 0.1
+    turtle-growth-bonus: 0.28
+    fuck-cost-percent: 0.04
+    fuck-fail-chance-penalty: 0.2
+    slow-growth-penalty: -0.25
+    transfer-commission: 0.15
+    max-pending-fail-chance: 0.5
+    max-pending-crit-chance: 0.75
+    min-pending-growth: -0.95
+    max-pending-growth: 5
+  activity:
+    look-back-days: 7
+    max-growth-bonus: 0.15
+  growth:
+    growth-cooldown: 8h
+    start-size: 1
+    growth-mean: 1.1
+    growth-min: 1.02
+    growth-max: 1.2
+    growth-limit: 5000
+    fail-chance: 0.05
+    fail-percent: 0.1
+    offline-fail-chance: 0.35
+    offline-fail-percent: 0.1
+    crit-chance: 0.15
+    crit-multiplier: 2.75

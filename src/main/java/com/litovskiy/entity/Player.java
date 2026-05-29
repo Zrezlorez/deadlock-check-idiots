@@ -14,7 +14,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
@@ -70,7 +69,7 @@ public class Player {
     // можно будет в отдельную сущность перенести при новых эффектах
     @Column(name = "status")
     @Enumerated(EnumType.STRING)
-    private PlayerStatus status;
+    private PlayerStatus status = PlayerStatus.NONE;
 
     @Column(name = "status_until")
     private LocalDateTime statusUntil;

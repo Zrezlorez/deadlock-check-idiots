@@ -1,11 +1,11 @@
 package com.litovskiy.service;
 
-import com.litovskiy.repository.LinkCodeRepository;
-import com.litovskiy.service.data.ActivityStatService;
-import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.entity.LinkCode;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import com.litovskiy.repository.LinkCodeRepository;
+import com.litovskiy.service.data.ActivityStatService;
+import com.litovskiy.service.data.PlayerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

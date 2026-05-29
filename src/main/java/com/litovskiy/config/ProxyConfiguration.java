@@ -5,6 +5,7 @@ import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.concurrent.TimeUnit;
@@ -12,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class ProxyConfiguration {
 
-    @Value("${proxy.isEnabled}")
+    @Value("${proxy.enabled}")
     private boolean isProxyEnabled;
 
     @Value("${proxy.username}")

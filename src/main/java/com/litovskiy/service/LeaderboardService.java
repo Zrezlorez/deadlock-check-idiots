@@ -1,11 +1,11 @@
 package com.litovskiy.service;
 
-import com.litovskiy.repository.ConversationParticipantRepository;
-import com.litovskiy.service.data.PlayerService;
+import com.litovskiy.config.properties.GameProperties;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
-import com.litovskiy.util.GameSetting;
+import com.litovskiy.repository.ConversationParticipantRepository;
+import com.litovskiy.service.data.PlayerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,11 +23,11 @@ public class LeaderboardService {
     private final PlayerService playerDao;
     private final ConversationParticipantRepository conversationParticipantRepository;
     private final ConversationStyleService conversationStyleService;
-    private final GameConfigService gameConfigService;
+    private final GameProperties gameProperties;
 
 
     public String buildLeaderboard(Platform platform, long requesterProfileId, Long scopeId) {
-        int limit = gameConfigService.getInt(GameSetting.LEADERBOARD_LIMIT);
+        int limit = gameProperties.getLeaderboardLimit();
         List<Player> rankedPlayers = scopeId == null
             ? playerDao.findTopByPlatform(platform, limit)
             : findScopeLeaderboard(platform, scopeId);

@@ -8,6 +8,7 @@ import com.litovskiy.util.GrowthContext;
 import com.litovskiy.util.PlayerStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.time.Clock;
 import java.time.LocalDateTime;
 
@@ -27,9 +28,9 @@ public class PlayerStatusService {
 
         if (status == PlayerStatus.LUDOMANIA) {
             return  switch (action) {
-                case JACKPOT, TURTLE ->
+                case JACKPOT, TURTLE, PRAY ->
                     CommandBlockReason.createBlocked(
-                        "Ваша лудомания не позволяет вам использовать команды, вы хотите только крутить казик. До окончания болезни /turtle и /jackpot временно недоступны."
+                        "Ваша лудомания не позволяет вам использовать положительные команды. До конца болензи вы можете только крутить казик и пиздить других людей со зла."
                     );
                 default -> CommandBlockReason.createAllowed();
             };
