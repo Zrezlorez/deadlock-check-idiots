@@ -1,21 +1,22 @@
 package com.litovskiy.bot.tg;
 
 import com.litovskiy.entity.Platform;
-import com.litovskiy.service.ability.AbilityService;
+import com.litovskiy.service.AbilityService;
 import com.litovskiy.service.AdminCommandService;
 import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.GrowService;
 import com.litovskiy.service.LeaderboardService;
-import com.litovskiy.service.PlayerAccountService;
 import com.litovskiy.service.LinkService;
-import com.litovskiy.bot.CommandMessage;
-import com.litovskiy.bot.CommandResult;
+import com.litovskiy.service.PlayerAccountService;
+import com.litovskiy.util.CommandMessage;
+import com.litovskiy.util.CommandResult;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 
 @Slf4j
 @Service
@@ -56,6 +57,8 @@ public class TgResponseBuilder {
                 buildLinkResponse(commandParts, profileId);
             case "/style" ->
                 buildStyleResponse(commandParts, chatId, profileId);
+            case "/profile" ->
+                buildProfileResponse(update, chatId, profileId);
             case "/admin" ->
                 adminCommandService.handle(
                 Platform.TELEGRAM,
@@ -72,12 +75,14 @@ public class TgResponseBuilder {
             /grow - вырастить показатель, раз в 8 часов
             /jackpot - увеличить шанс джекпота и неудачи за процент от своего размера
             /slow - замедлить рост врага бесплатно
+            /fuck - увеличить шанс неудачи для врага за процент от своего размера
             /turtle - увеличить себе рост бесплатно
             /pray - уменьшить себе шанс неудачи
             /transfer [число] - перевести часть роста другому игроку с комиссией (переводить можно только тем, у кого меньше)
             /top - увидеть топ игроков в своей беседе (в личных сообщениях - глобальный топ)
             /link - привязать свой тг/дс (рекомендуется использовать в лс с ботом)
             /style - изменить стиль роста (только в беседах)
+            /profile - посмотреть профиль (свой или другого игрока)
             """;
     }
 
@@ -88,12 +93,12 @@ public class TgResponseBuilder {
         return growService.grow(Platform.TELEGRAM, profileId, scopeId, isScheduled);
     }
 
-    private CommandResult  buildFuckResponse(Update update, long chatId, long profileId) {
+    private CommandResult buildFuckResponse(Update update, long chatId, long profileId) {
         if (chatId >= 0) {
             return CommandResult.single("Эта способность доступна только в группах.");
         }
 
-        User target = extractReplyTarget(update);
+        User target = extractReplyTarget(update.getMessage());
         if (target == null) {
             return CommandResult.single("Ответьте этой командой на сообщение цели.");
         }
@@ -107,7 +112,7 @@ public class TgResponseBuilder {
             return CommandResult.single("Эта способность доступна только в группах.");
         }
 
-        User target = extractReplyTarget(update);
+        User target = extractReplyTarget(update.getMessage());
         if (target == null) {
             return CommandResult.single("Ответьте этой командой на сообщение цели.");
         }
@@ -121,7 +126,7 @@ public class TgResponseBuilder {
             return CommandResult.single("Эта способность доступна только в группах.");
         }
 
-        User target = extractReplyTarget(update);
+        User target = extractReplyTarget(update.getMessage());
         if (target == null) {
             return CommandResult.single("Ответьте этой командой на сообщение цели.");
         }
@@ -159,11 +164,25 @@ public class TgResponseBuilder {
         return CommandResult.single(conversationStyleService.updateTelegramStyle(chatId, profileId, commandParts[1]));
     }
 
-    private User extractReplyTarget(Update update) {
-        if (update.getMessage() == null || update.getMessage().getReplyToMessage() == null) {
-            return null;
+    private CommandResult buildProfileResponse(Update update, long chatId, long profileId) {
+        User target = extractReplyTarget(update.getMessage());
+        if (target != null && target.getIsBot()) {
+            return CommandResult.single("Бот нищий, у него нет профиля");
         }
-        return update.getMessage().getReplyToMessage().getFrom();
+
+        long targetProfileId = target == null
+                ? profileId
+                : target.getId();
+
+        return growService.buildProfileResponse(Platform.TELEGRAM, targetProfileId, chatId);
     }
 
+    private User extractReplyTarget(Message message) {
+        Message replyMessage = message.getReplyToMessage();
+        if (replyMessage == null
+            || replyMessage.getMessageId().equals(replyMessage.getMessageThreadId())) {
+            return null;
+        }
+        return replyMessage.getFrom();
+    }
 }

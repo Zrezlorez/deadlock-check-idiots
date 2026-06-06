@@ -2,11 +2,12 @@ package com.litovskiy.service.data;
 
 import com.litovskiy.entity.ActivityStat;
 import com.litovskiy.entity.Platform;
-import com.litovskiy.util.PlayerTotalProjection;
 import com.litovskiy.repository.ActivityStatRepository;
+import com.litovskiy.util.PlayerTotalProjection;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;

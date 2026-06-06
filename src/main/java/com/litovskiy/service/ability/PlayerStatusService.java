@@ -1,21 +1,27 @@
-package com.litovskiy.service.ability;
+package com.litovskiy.service;
 
 import com.litovskiy.entity.Player;
 import com.litovskiy.entity.PlayerBehaviorStats;
 import com.litovskiy.log.Action;
+import com.litovskiy.service.log.PlayerBehaviorStatService;
 import com.litovskiy.util.CommandBlockReason;
 import com.litovskiy.util.GrowthContext;
+import com.litovskiy.util.PlayerStatus;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class PlayerStatusService {
     //TODO: вынести все константы в кфг
 
     private final Clock clock;
+    private final PlayerBehaviorStatService service;
 
     public CommandBlockReason validateActionAllowed(Player player, Action action) {
         PlayerStatus status = getActiveStatus(player);
@@ -26,9 +32,9 @@ public class PlayerStatusService {
 
         if (status == PlayerStatus.LUDOMANIA) {
             return  switch (action) {
-                case JACKPOT, TURTLE ->
+                case JACKPOT, TURTLE, PRAY ->
                     CommandBlockReason.createBlocked(
-                        "Ваша лудомания не позволяет вам использовать команды, вы хотите только крутить казик. До окончания болезни /turtle и /jackpot временно недоступны."
+                        "Ваша лудомания не позволяет вам использовать положительные команды. До конца болензи вы можете только крутить казик и пиздить других людей со зла."
                     );
                 default -> CommandBlockReason.createAllowed();
             };
@@ -110,6 +116,10 @@ public class PlayerStatusService {
             return value * 2;
         }
 
+        if (actor.getSize() < target.getSize() * 0.1) {
+            return -1;
+        }
+
         return value;
     }
 
@@ -129,7 +139,7 @@ public class PlayerStatusService {
             case LUDOMANIA -> context
                 .withFailChanceModifier(0.05)
                 .withCritChanceModifier(0.05)
-                .withCritMultiplier(context.critMultiplier() + 45)
+                .withCritMultiplier(context.critMultiplier() + 42.25)
                 .withFailPercent(0.4);
             case SHAO_LIN -> context
                 .withFailChanceModifier(context.failChance() - 0.10)
@@ -141,24 +151,25 @@ public class PlayerStatusService {
     }
 
 
-    public String applyStatus(Player player, PlayerBehaviorStats stat) {
+    public PlayerStatus applyStatus(Player player, PlayerBehaviorStats stat) {
         if (stat.getSameAbilityStreak() < 3) {
-            return null;
+            return PlayerStatus.NONE;
         }
 
         Action lastAction = stat.getLastAbilityAction();
         if (lastAction == null) {
-            return null;
+            return PlayerStatus.NONE;
         }
 
-        String message = apply(player, lastAction.getEvent());
+        PlayerStatus status = apply(player, lastAction.getEvent());
 
-        if (message != null) {
+        if (status != PlayerStatus.NONE) {
             stat.setLastAbilityAction(null);
             stat.setSameAbilityStreak(0);
+            service.save(stat);
         }
 
-        return message;
+        return status;
     }
 
     public PlayerStatus getActiveStatus(Player player) {
@@ -175,13 +186,14 @@ public class PlayerStatusService {
         }
 
         if (!player.getStatusUntil().isAfter(LocalDateTime.now(clock))) {
-            return PlayerStatus.NONE;
+            player.setStatus(PlayerStatus.NONE);
+            player.setStatusUntil(null);
         }
 
         return player.getStatus();
     }
 
-    private String apply(Player player, PlayerStatus status) {
+    private PlayerStatus apply(Player player, PlayerStatus status) {
         LocalDateTime now = LocalDateTime.now(clock);
 
         if (status == PlayerStatus.NONE) {
@@ -195,7 +207,7 @@ public class PlayerStatusService {
         player.setStatus(status);
         player.setStatusUntil(now.plusHours(36));
 
-        return status.getMessage();
+        return status;
     }
 
     private boolean hasActiveStatus(Player player, LocalDateTime now) {

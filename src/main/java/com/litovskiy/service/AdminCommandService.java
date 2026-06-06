@@ -1,34 +1,25 @@
 package com.litovskiy.service;
 
-import com.litovskiy.service.data.AdminAccessService;
-import com.litovskiy.service.data.GameConfigService;
-import com.litovskiy.service.data.PlayerService;
+import com.litovskiy.config.cloud.GithubConfigService;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
-import com.litovskiy.service.log.GameLogService;
-import com.litovskiy.bot.CommandResult;
-import com.litovskiy.service.data.GameSetting;
-import com.litovskiy.util.SettingGroup;
+import com.litovskiy.service.data.PlayerService;
+import com.litovskiy.util.CommandResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AdminCommandService {
 
     private final AdminAccessService adminAccessService;
-    private final GameConfigService gameConfigService;
     private final PlayerService playerDao;
     private final DateTimeFormatter formatter;
-    private final GameLogService gameLogService;
+    private final GithubConfigService githubConfigService;
 
     public CommandResult handle(Platform requesterPlatform, long requesterProfileId, String rawCommand) {
         if (!adminAccessService.isAdmin(requesterPlatform, requesterProfileId)) {
@@ -42,9 +33,8 @@ public class AdminCommandService {
 
         String[] parts = commandBody.split("\\s+");
         return switch (parts[0].toLowerCase()) {
-            case "config" -> reply(availableSettings());
-            case "set" -> reply(setConfig(parts));
-            case "reset" -> reply(resetConfig(parts));
+            case "config" -> reply("Временно отключено");
+            case "reload-config" -> reply(githubConfigService.reload().message());
             case "player" -> reply(handlePlayer(parts));
             case "help" -> reply(help());
             default -> reply("Неизвестная admin-команда.\n" + help());
@@ -53,38 +43,6 @@ public class AdminCommandService {
 
     private CommandResult reply(String text) {
         return CommandResult.single(text);
-    }
-
-    private String setConfig(String[] parts) {
-        if (parts.length < 3) {
-            return "Использование: admin set <key> <value>";
-        }
-
-        GameSetting setting = GameSetting.fromKey(parts[1]);
-        if (setting == null) {
-            return "Неизвестная настройка. Доступны: \n" + availableSettings();
-        }
-
-        try {
-            gameConfigService.set(setting, parts[2]);
-            return "Настройка обновлена: " + setting.getKey() + " = " + gameConfigService.getRawValue(setting);
-        } catch (RuntimeException e) {
-            return "Не удалось сохранить настройку: " + e.getMessage();
-        }
-    }
-
-    private String resetConfig(String[] parts) {
-        if (parts.length < 2) {
-            return "Использование: admin reset <key>";
-        }
-
-        GameSetting setting = GameSetting.fromKey(parts[1]);
-        if (setting == null) {
-            return "Неизвестная настройка. Доступны: \n" + availableSettings();
-        }
-
-        gameConfigService.reset(setting);
-        return "Настройка сброшена к дефолту: " + setting.getKey() + " = " + setting.getDefaultValue();
     }
 
     private String handlePlayer(String[] parts) {
@@ -230,43 +188,13 @@ public class AdminCommandService {
         };
     }
 
-    private String availableSettings() {
-        return Arrays.stream(GameSetting.values())
-            .collect(Collectors.groupingBy(
-                GameSetting::getGroup,
-                LinkedHashMap::new,
-                Collectors.toList()
-            ))
-            .entrySet()
-            .stream()
-            .map(entry -> formatGroup(entry.getKey(), entry.getValue()))
-            .collect(Collectors.joining("\n\n"));
-    }
-
-    private String formatGroup(SettingGroup group, List<GameSetting> settings) {
-        StringBuilder builder = new StringBuilder();
-
-        builder.append(group.getDisplayName()).append("\n");
-
-        for (GameSetting setting : settings) {
-            builder.append("• ")
-                .append(setting.getKey())
-                .append(" = ")
-                .append(gameConfigService.getRawValue(setting))
-                .append("\n  ")
-                .append(setting.getDescription())
-                .append("\n");
-        }
-
-        return builder.toString().trim();
-    }
-
     private String help() {
         return """
             Admin-команды:
             admin config
             admin set <key> <value>
             admin reset <key>
+            admin reload-config
             admin player show <platform> <username|tag|id>
             admin player set-size <platform> <username|tag|id> <value>
             admin player add-size <platform> <username|tag|id> <value>

@@ -1,23 +1,20 @@
 package com.litovskiy.service.data;
 
+import com.litovskiy.config.properties.AdminProperties;
 import com.litovskiy.entity.Platform;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-import java.util.Set;
-
 @Component
+@RequiredArgsConstructor
 public class AdminAccessService {
 
-    @Value("${admin.telegramUserIds}")
-    private Set<Long> telegramAdminIds;
-    @Value("${admin.discordUserIds}")
-    private Set<Long> discordAdminIds;
+    private final AdminProperties adminProperties;
 
     public boolean isAdmin(Platform platform, long profileId) {
         return switch (platform) {
-            case TELEGRAM -> telegramAdminIds.contains(profileId);
-            case DISCORD -> discordAdminIds.contains(profileId);
+            case TELEGRAM -> adminProperties.getTelegramAdminIds().contains(profileId);
+            case DISCORD -> adminProperties.getDiscordAdminIds().contains(profileId);
         };
     }
 

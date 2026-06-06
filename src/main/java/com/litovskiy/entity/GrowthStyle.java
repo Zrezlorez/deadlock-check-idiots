@@ -1,10 +1,12 @@
 package com.litovskiy.entity;
 
 import lombok.Getter;
+
 import java.util.Arrays;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
 import static com.litovskiy.util.StringUtil.round;
 
 @Getter

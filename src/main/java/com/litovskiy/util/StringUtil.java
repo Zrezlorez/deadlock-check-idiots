@@ -1,13 +1,10 @@
 package com.litovskiy.util;
 
 import org.telegram.telegrambots.meta.api.objects.User;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
-import java.util.List;
 
 public final class StringUtil {
 
@@ -71,24 +68,5 @@ public final class StringUtil {
             return user.getName();
         }
         return user.getName() + "#" + discriminator;
-    }
-
-    public static InlineKeyboardMarkup getKeyboard() {
-        InlineKeyboardButton button1 = InlineKeyboardButton
-            .builder()
-            .text("Оставить")
-            .callbackData("save")
-            .build();
-
-        InlineKeyboardButton button2 = InlineKeyboardButton
-            .builder()
-            .text("Аборт")
-            .callbackData("abort")
-            .build();
-
-        return InlineKeyboardMarkup
-            .builder()
-            .keyboardRow(new InlineKeyboardRow(List.of(button1, button2)))
-            .build();
     }
 }

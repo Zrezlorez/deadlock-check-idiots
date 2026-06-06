@@ -1,28 +1,27 @@
 package com.litovskiy.service;
 
-import com.litovskiy.entity.PlayerGrowthStats;
-import com.litovskiy.service.ability.PlayerStatusService;
-import com.litovskiy.service.data.GameConfigService;
-import com.litovskiy.bot.CommandResult;
-import com.litovskiy.service.data.GameSetting;
-import com.litovskiy.service.activity.ActivityService;
-import com.litovskiy.service.data.PlayerService;
+import com.litovskiy.config.properties.GrowthProperties;
 import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
+import com.litovskiy.entity.PlayerGrowthStats;
+import com.litovskiy.service.activity.ActivityService;
+import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.service.log.GameLogService;
 import com.litovskiy.service.log.PlayerGrowthStatsService;
+import com.litovskiy.util.CommandMessage;
+import com.litovskiy.util.CommandResult;
 import com.litovskiy.util.GrowOutcome;
 import com.litovskiy.util.GrowthCalculation;
 import com.litovskiy.util.GrowthContext;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.Random;
 
@@ -39,18 +38,18 @@ public class GrowService {
     private final PlayerAccountService playerAccountService;
     private final ActivityService activityService;
     private final ConversationStyleService conversationStyleService;
-    private final GameConfigService gameConfigService;
     private final PlayerStatusService playerStatusService;
     private final PlayerGrowthStatsService playerGrowthStatsService;
     private final GameLogService gameLogService;
     private final Random random;
+    private final GrowthProperties growthProperties;
+    private final AbilityService abilityService;
 
     @Transactional
     public CommandResult grow(Platform platform, long playerId, Long scopeId, boolean isScheduledMessage) {
-        LocalDateTime now = LocalDateTime.now();
         Player player = playerAccountService.resolveOrCreate(platform, playerId);
 
-        Optional<String> cooldown = checkCooldown(player, now);
+        Optional<String> cooldown = getCooldownString(player);
         if (cooldown.isPresent()) {
             return CommandResult.single(cooldown.get());
         }
@@ -64,26 +63,53 @@ public class GrowService {
 
 
         player.setSize(growthCalculation.newValue());
-        player.setLastGrowTime(now);
+        player.setLastGrowTime(LocalDateTime.now());
         playerDao.save(player);
 
         return CommandResult.single(buildResultMessage(style, growthCalculation));
     }
 
-    private Optional<String> checkCooldown(Player player, LocalDateTime now) {
+    public CommandResult buildProfileResponse(Platform platform, long playerId, Long scopeId) {
+        Player player = playerAccountService.resolveOrCreate(platform, playerId);
+        GrowthStyle style = conversationStyleService.getStyle(platform, scopeId);
+
+        String profileName = platform == Platform.TELEGRAM
+                ? player.getTelegramDisplayName()
+                : player.getDiscordTag();
+
+        String text = """
+                Профиль игрока %s
+                
+                %s: %s
+                Активный статус: %s
+                
+                Время до следующего роста: %s
+                Время до следующей способности: %s
+                """.formatted(
+                profileName,
+                StringUtils.capitalize(style.getDisplayName()),
+                convertValue(player.getSize(), style),
+                playerStatusService.getActiveStatus(player).getName(),
+                getCooldown(player).map(StringUtil::formatDuration).orElse("Доступно сейчас"),
+                abilityService.getCooldown(player).map(StringUtil::formatDuration).orElse("Доступно сейчас"));
+
+        return CommandResult.of(CommandMessage.reply(text));
+    }
+
+    public Optional<Duration> getCooldown(Player player) {
+        LocalDateTime now = LocalDateTime.now();
         LocalDateTime lastTime = player.getLastGrowTime();
         if (lastTime != null) {
-            int timeRange = gameConfigService.getInt(GameSetting.COOLDOWN_RANGE);
-            ChronoUnit timeUnit = gameConfigService.getChronoUnit(GameSetting.COOLDOWN_UNIT);
-
-            LocalDateTime nextAllowed = lastTime.plus(timeRange, timeUnit);
-            Duration duration = Duration.between(now, nextAllowed);
+            LocalDateTime nextAllowed = lastTime.plus(growthProperties.getGrowthCooldown());
             if (now.isBefore(nextAllowed)) {
-                return Optional.of("Вы уже растили показатель, следующая попытка будет через:\n"
-                    + formatDuration(duration));
+                return Optional.of(Duration.between(now, nextAllowed));
             }
         }
         return Optional.empty();
+    }
+
+    private Optional<String> getCooldownString(Player player) {
+        return getCooldown(player).map(it -> "Вы уже растили показатель, следующая попытка будет через:\n" + formatDuration(it));
     }
 
     private GrowthCalculation calculateGrowth(Platform platform, Long scopeId, Player player, boolean isScheduledMessage) {
@@ -97,7 +123,7 @@ public class GrowService {
         double critChance = context.critChance();
 
         if (isScheduledMessage) {
-            failChance += gameConfigService.getDouble(GameSetting.OFFLINE_FAIL_CHANCE);
+            failChance += growthProperties.getOfflineFailChance();
             critChance = 0;
         }
 
@@ -142,15 +168,15 @@ public class GrowService {
     }
 
     private GrowthBase calculateBaseGrowth(double currentSize, double activityBonus) {
-        double growthMean = gameConfigService.getDouble(GameSetting.GROWTH_MEAN);
-        double minGrowth = gameConfigService.getDouble(GameSetting.GROWTH_MIN);
-        double maxGrowth = gameConfigService.getDouble(GameSetting.GROWTH_MAX);
-        double slowScale = gameConfigService.getDouble(GameSetting.SLOW_SCALE);
+        double growthMean = growthProperties.getGrowthMean();
+        double minGrowth = growthProperties.getGrowthMin();
+        double maxGrowth = growthProperties.getGrowthMax();
+        double growthLimit = growthProperties.getGrowthLimit();
 
         double baseGrowth = growthMean + random.nextGaussian() * 0.05;
         baseGrowth = StringUtil.clamp(baseGrowth, minGrowth, maxGrowth);
 
-        double slowdown = 1.0 / (1.0 + currentSize / slowScale);
+        double slowdown = 1.0 / (1.0 + currentSize / growthLimit);
         double modifier = 1.0 + (baseGrowth - 1.0) * slowdown * activityBonus;
 
         return new GrowthBase(baseGrowth, slowdown, modifier);
@@ -168,7 +194,7 @@ public class GrowService {
 
         double failPercent = context.failPercent();
         if (isScheduledMessage) {
-            failPercent += gameConfigService.getDouble(GameSetting.OFFLINE_FAIL_PERCENT);
+            failPercent += growthProperties.getOfflineFailPercent();
         }
         double newValue = Math.max(0.0, round(oldValue * (1.0 - failPercent)));
         double diff = round(Math.abs(newValue - oldValue));
@@ -228,10 +254,10 @@ public class GrowService {
     }
 
     private GrowthContext consumePendingEffects(Player player) {
-        double critChance = gameConfigService.getDouble(GameSetting.CRIT_CHANCE);
-        double critMultiplier = gameConfigService.getDouble(GameSetting.CRIT_MULTIPLIER);
-        double failChance = gameConfigService.getDouble(GameSetting.FAIL_CHANCE);
-        double failPercent = gameConfigService.getDouble(GameSetting.FAIL_PERCENT);
+        double critChance = growthProperties.getCritChance();
+        double critMultiplier = growthProperties.getCritMultiplier();
+        double failChance = growthProperties.getFailChance();
+        double failPercent = growthProperties.getFailPercent();
         GrowthContext context = new GrowthContext(
             clampChance(critChance + player.getPendingCritChanceModifier()),
             critMultiplier,
@@ -251,5 +277,4 @@ public class GrowService {
 
     private record GrowthBase(double baseGrowth, double slowdown, double modifier) {
     }
-
 }

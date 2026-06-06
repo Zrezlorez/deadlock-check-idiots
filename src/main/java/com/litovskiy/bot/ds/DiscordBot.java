@@ -1,10 +1,10 @@
 package com.litovskiy.bot.ds;
 
 import com.litovskiy.entity.Platform;
-import com.litovskiy.service.activity.ActivityService;
-import com.litovskiy.service.data.ConversationParticipantService;
+import com.litovskiy.service.ConversationParticipantService;
 import com.litovskiy.service.PlayerAccountService;
-import com.litovskiy.bot.CommandResult;
+import com.litovskiy.service.activity.ActivityService;
+import com.litovskiy.util.CommandResult;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -72,6 +72,7 @@ public class DiscordBot extends ListenerAdapter {
                     .addOption(OptionType.STRING, "code", "Код из другого бота", false),
                 Commands.slash("style", "Посмотреть или изменить стиль роста на сервере")
                     .addOption(OptionType.STRING, "name", "Название стиля", false),
+                Commands.slash("profile", "Посмотреть профиль (свой или другого игрока)"),
                 Commands.slash("admin", "Админ-команды")
                     .addOption(OptionType.STRING, "command", "Например: config, player show telegram @name, player show discord user#1234", false)
             )

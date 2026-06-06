@@ -38,6 +38,7 @@ public class DiscordResponseBuilder {
             case "top" -> buildLeaderboardResponse(event);
             case "link" -> buildLinkResponse(event);
             case "style" -> buildStyleResponse(event);
+            case "profile" -> buildProfileResponse(event);
             case "admin" -> adminCommandService.handle(
                 Platform.DISCORD,
                 event.getUser().getIdLong(),
@@ -152,5 +153,14 @@ public class DiscordResponseBuilder {
         }
 
         return CommandResult.single(conversationStyleService.updateDiscordStyle(scopeId, styleName));
+    }
+
+    private CommandResult buildProfileResponse(SlashCommandInteractionEvent event) {
+        User target = event.getOption("user", null, OptionMapping::getAsUser);
+        long targetProfileId = target == null
+                ? event.getUser().getIdLong()
+                : target.getIdLong();
+
+        return growService.buildProfileResponse(Platform.DISCORD, targetProfileId, event.getGuild().getIdLong());
     }
 }
