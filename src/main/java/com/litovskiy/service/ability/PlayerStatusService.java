@@ -1,4 +1,4 @@
-package com.litovskiy.service;
+package com.litovskiy.service.ability;
 
 import com.litovskiy.entity.Player;
 import com.litovskiy.entity.PlayerBehaviorStats;
@@ -6,7 +6,6 @@ import com.litovskiy.log.Action;
 import com.litovskiy.service.log.PlayerBehaviorStatService;
 import com.litovskiy.util.CommandBlockReason;
 import com.litovskiy.util.GrowthContext;
-import com.litovskiy.util.PlayerStatus;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,8 +1,10 @@
 package com.litovskiy.entity;
 
-import com.litovskiy.bot.PlayerDecision;
+import com.litovskiy.bot.tg.PlayerDecision;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -30,11 +32,16 @@ public class TelegramCallbackVote {
     private long playerId;
 
     @Column(name = "player_decision")
+    @Enumerated(EnumType.STRING)
     private PlayerDecision playerDecision;
 
-    @Column(name = "voted_dt")
+    @Column(name = "voted_at")
     private Instant votedAt;
 
     @Column(name = "auto_selected")
     private boolean autoSelected;
+
+    // потом сделать отдельный тип классом как logmetadata
+    @Column(name = "is_mother")
+    private boolean isMother;
 }

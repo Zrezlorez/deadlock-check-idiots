@@ -5,12 +5,14 @@ import com.litovskiy.entity.GrowthStyle;
 import com.litovskiy.entity.Platform;
 import com.litovskiy.entity.Player;
 import com.litovskiy.entity.PlayerGrowthStats;
+import com.litovskiy.service.ability.AbilityService;
+import com.litovskiy.service.ability.PlayerStatusService;
 import com.litovskiy.service.activity.ActivityService;
 import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.service.log.GameLogService;
 import com.litovskiy.service.log.PlayerGrowthStatsService;
-import com.litovskiy.util.CommandMessage;
-import com.litovskiy.util.CommandResult;
+import com.litovskiy.bot.CommandMessage;
+import com.litovskiy.bot.CommandResult;
 import com.litovskiy.util.GrowOutcome;
 import com.litovskiy.util.GrowthCalculation;
 import com.litovskiy.util.GrowthContext;
@@ -26,7 +28,6 @@ import java.util.Optional;
 import java.util.Random;
 
 import static com.litovskiy.entity.GrowthStyle.convertValue;
-import static com.litovskiy.util.StringUtil.clamp;
 import static com.litovskiy.util.StringUtil.formatDuration;
 import static com.litovskiy.util.StringUtil.round;
 
@@ -174,7 +175,7 @@ public class GrowService {
         double growthLimit = growthProperties.getGrowthLimit();
 
         double baseGrowth = growthMean + random.nextGaussian() * 0.05;
-        baseGrowth = StringUtil.clamp(baseGrowth, minGrowth, maxGrowth);
+        baseGrowth =  Math.clamp(baseGrowth, minGrowth, maxGrowth);
 
         double slowdown = 1.0 / (1.0 + currentSize / growthLimit);
         double modifier = 1.0 + (baseGrowth - 1.0) * slowdown * activityBonus;
@@ -272,7 +273,7 @@ public class GrowService {
     }
 
     private double clampChance(double value) {
-        return clamp(round(value), 0, 0.95);
+        return Math.clamp(round(value), 0, 0.95);
     }
 
     private record GrowthBase(double baseGrowth, double slowdown, double modifier) {

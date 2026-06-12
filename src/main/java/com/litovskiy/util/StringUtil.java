@@ -20,10 +20,6 @@ public final class StringUtil {
             .replace("\"", "&quot;");
     }
 
-    public static double clamp(double value, double min, double max) {
-        return Math.max(min, Math.min(max, value));
-    }
-
     public static double round(double value) {
         return BigDecimal.valueOf(value)
             .setScale(2, RoundingMode.HALF_UP)
@@ -43,23 +39,32 @@ public final class StringUtil {
     }
 
     public static String formatTelegramDisplayName(User user) {
+        return formatTelegramDisplayName(
+            user.getFirstName(),
+            user.getLastName(),
+            user.getUserName(),
+            user.getId()
+        );
+    }
+
+    public static String formatTelegramDisplayName(String firstName, String lastName, String username, long userId) {
         StringBuilder builder = new StringBuilder();
-        if (!user.getFirstName().isBlank()) {
-            builder.append(user.getFirstName().trim());
+        if (firstName != null && !firstName.isBlank()) {
+            builder.append(firstName.trim());
         }
-        if (user.getLastName() != null && !user.getLastName().isBlank()) {
+        if (lastName != null && !lastName.isBlank()) {
             if (!builder.isEmpty()) {
                 builder.append(' ');
             }
-            builder.append(user.getLastName().trim());
+            builder.append(lastName.trim());
         }
         if (!builder.isEmpty()) {
             return builder.toString();
         }
-        if (user.getUserName() != null && !user.getUserName().isBlank()) {
-            return "@" + user.getUserName().trim();
+        if (username != null && !username.isBlank()) {
+            return "@" + username.trim();
         }
-        return "Пользователь " + user.getId();
+        return "Пользователь " + userId;
     }
 
     public static String formatDiscordTag(net.dv8tion.jda.api.entities.User user) {

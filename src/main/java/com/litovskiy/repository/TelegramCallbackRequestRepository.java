@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface TelegramCallbackRequestRepository extends JpaRepository<TelegramCallbackRequest, Long> {
+    TelegramCallbackRequest findByScopeIdAndMessageId(long scopeId, long messageId);
 }

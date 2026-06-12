@@ -1,4 +1,4 @@
-package com.litovskiy.service;
+package com.litovskiy.service.ability;
 
 import com.litovskiy.config.properties.AbilityProperties;
 import com.litovskiy.entity.GrowthStyle;
@@ -12,15 +12,15 @@ import com.litovskiy.log.metadata.JackpotLogMetadata;
 import com.litovskiy.log.metadata.PrayLogMetadata;
 import com.litovskiy.log.metadata.TransferLogMetadata;
 import com.litovskiy.repository.ConversationParticipantRepository;
+import com.litovskiy.service.ConversationStyleService;
+import com.litovskiy.service.PlayerAccountService;
+import com.litovskiy.service.children.TelegramCallbackService;
 import com.litovskiy.service.data.PlayerService;
 import com.litovskiy.service.log.GameLogService;
 import com.litovskiy.service.log.PlayerBehaviorStatService;
-import com.litovskiy.util.AbilitySelfContext;
-import com.litovskiy.util.AbilityTargetContext;
 import com.litovskiy.util.CommandBlockReason;
-import com.litovskiy.util.CommandMessage;
-import com.litovskiy.util.CommandResult;
-import com.litovskiy.util.PlayerStatus;
+import com.litovskiy.bot.CommandMessage;
+import com.litovskiy.bot.CommandResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -29,7 +29,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static com.litovskiy.util.StringUtil.clamp;
 import static com.litovskiy.util.StringUtil.formatDuration;
 import static com.litovskiy.util.StringUtil.round;
 
@@ -46,6 +45,7 @@ public class AbilityService {
     private final PlayerStatusService playerStatusService;
     private final Clock clock;
     private final AbilityProperties abilityProperties;
+    private final TelegramCallbackService callbackService;
 
 
     public CommandResult fuck(Platform platform, long playerId, Long scopeId, long targetPlayerId) {
@@ -112,8 +112,8 @@ public class AbilityService {
             + "% за " + GrowthStyle.convertValue(cost, growthStyle) + ". Следующая попытка роста у цели будет опаснее.";
 
         return CommandResult.of(
-            CommandMessage.reply(result)
-            //CommandMessage.broadcast(statusMsg)
+            CommandMessage.reply(result),
+            callbackService.registerNewCallback(scopeId, actor, target)
         );
     }
 
@@ -150,7 +150,7 @@ public class AbilityService {
         double affectedGrowthModifier = playerStatusService.modifyGrowthModifier(actor, target, Action.SLOW, growthPenalty);
 
         double oldTargetGrowthModifier = target.getPendingFailChanceModifier();
-        double newTargetGrowthModifier = clamp(
+        double newTargetGrowthModifier =  Math.clamp(
             target.getPendingGrowthModifier() - affectedGrowthModifier,
             minGrowth,
             maxGrowth

@@ -82,4 +82,8 @@ public class Player {
         this.pendingCritChanceModifier = 0.0;
         this.pendingGrowthModifier = 0.0;
     }
+
+    public void addPendingGrowthModifier(double value) {
+        pendingGrowthModifier += value;
+    }
 }

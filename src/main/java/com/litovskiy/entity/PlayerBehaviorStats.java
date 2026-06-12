@@ -50,6 +50,9 @@ public class PlayerBehaviorStats {
     @Enumerated(EnumType.STRING)
     private Action lastAbilityAction;
 
+    @Column(name = "action_target_id")
+    private Long actionTargetId;
+
     @Column(name = "same_ability_streak")
     private int sameAbilityStreak;
 
