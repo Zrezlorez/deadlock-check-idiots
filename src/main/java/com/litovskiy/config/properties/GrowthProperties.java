@@ -39,6 +39,10 @@ public class GrowthProperties {
     @NotNull
     private Double growthLimit;
 
+    @Min(0)
+    @NotNull
+    private Double growthGauss;
+
     @NotNull
     @Range(min = 0, max = 1)
     private Double failChance;

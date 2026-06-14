@@ -72,10 +72,11 @@ game:
   growth:
     growth-cooldown: 1s
     start-size: 1
-    growth-mean: 1.1
-    growth-min: 1.02
+    growth-mean: 1.15
+    growth-min: 1.1
     growth-max: 1.2
-    growth-limit: 5000
+    growth-gauss: 0.025
+    growth-limit: 500000
     fail-chance: 0.05
     fail-percent: 0.1
     offline-fail-chance: 0.35

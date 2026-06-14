@@ -33,7 +33,7 @@ public class PlayerStatusService {
             return  switch (action) {
                 case JACKPOT, TURTLE, PRAY ->
                     CommandBlockReason.createBlocked(
-                        "Ваша лудомания не позволяет вам использовать положительные команды. До конца болензи вы можете только крутить казик и пиздить других людей со зла."
+                        "Ваша лудомания не позволяет вам использовать положительные команды. До конца болезни вы можете только крутить казик и пиздить других людей со зла."
                     );
                 default -> CommandBlockReason.createAllowed();
             };
