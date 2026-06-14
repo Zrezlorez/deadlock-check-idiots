@@ -1,11 +1,12 @@
 alter table player_behavior_stats add column action_target_id bigint;
+alter table player_behavior_stats add column same_ability_and_target_streak bigint default 0;
 
 create table if not exists telegram_callback_request (
     id bigserial primary key,
     scope_id bigint,
     message_id bigint,
     status varchar(50),
-    expired_at timestamp ,
+    expired_at timestamp,
     complete_at timestamp,
     created_at timestamp not null default current_timestamp
 );
@@ -17,9 +18,7 @@ create table if not exists telegram_callback_vote (
     player_decision varchar(50),
     voted_at timestamp,
     auto_selected boolean,
-    is_mother boolean,
-
-    constraint fk_telegram_callback_vote_request
+    is_mother boolean
 );
 
 create table if not exists children

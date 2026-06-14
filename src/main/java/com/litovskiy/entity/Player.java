@@ -86,4 +86,12 @@ public class Player {
     public void addPendingGrowthModifier(double value) {
         pendingGrowthModifier += value;
     }
+
+    public void addPendingFailChanceModifier(double value) {
+        pendingFailChanceModifier += value;
+    }
+
+    public void addPendingCritChanceModifier(double value) {
+        pendingCritChanceModifier += value;
+    }
 }

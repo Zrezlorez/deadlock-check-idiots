@@ -14,6 +14,7 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.Objects;
 
 @Entity
 @Getter
@@ -56,6 +57,9 @@ public class PlayerBehaviorStats {
     @Column(name = "same_ability_streak")
     private int sameAbilityStreak;
 
+    @Column(name = "same_ability_and_target_streak")
+    private int sameAbilityAndTargetStreak;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "archetype")
     private PlayerArchetype archetype;
@@ -64,8 +68,30 @@ public class PlayerBehaviorStats {
         this.playerId = playerId;
     }
 
-    public void incrementAbilityStreak() {
+    public void applyAbility(Action action, Long targetId) {
+        boolean sameAction = action == lastAbilityAction;
+        boolean sameTarget = Objects.equals(targetId, actionTargetId);
+
+        if (!sameAction) {
+            resetAbilityStats(action, targetId);
+            return;
+        }
+
         sameAbilityStreak++;
+
+        if (sameTarget) {
+            sameAbilityAndTargetStreak++;
+        } else {
+            sameAbilityAndTargetStreak = 1;
+            actionTargetId = targetId;
+        }
+    }
+
+    private void resetAbilityStats(Action action, Long targetId) {
+        this.lastAbilityAction = action;
+        this.actionTargetId = targetId;
+        this.sameAbilityStreak = 1;
+        this.sameAbilityAndTargetStreak = 1;
     }
 
 }

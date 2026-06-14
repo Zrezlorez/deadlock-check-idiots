@@ -138,7 +138,11 @@ public class TelegramCallbackService {
                 childrenService.registry(scopeId, mother, father);
                 return CallbackResult.edit(getSuccessText(), null);
             }
+            mother.addPendingGrowthModifier(-0.5);
+            father.addPendingGrowthModifier(-0.5);
 
+            mother.addPendingFailChanceModifier(0.25);
+            father.addPendingFailChanceModifier(0.25);
             return CallbackResult.edit(getDeclineText(mother, father, motherVote, fatherVote), null);
         }
 

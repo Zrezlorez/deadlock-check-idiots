@@ -104,16 +104,21 @@ public class AbilityService {
             targetPlayerId, target.getSize(), null,
             Action.FUCK, logMetadata);
 
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.FUCK, targetPlayerId);
 
         playerDao.save(target);
         playerDao.save(actor);
 
+        CommandMessage commandMessage = CommandMessage.reply(null);
+        if (stat.getSameAbilityAndTargetStreak() == 3) {
+            commandMessage = callbackService.registerNewCallback(scopeId, actor, target);
+        }
         String result = "Вы усилили шанс неудачи цели на " + toPercent(failBonus)
             + "% за " + GrowthStyle.convertValue(cost, growthStyle) + ". Следующая попытка роста у цели будет опаснее.";
 
         return CommandResult.of(
             CommandMessage.reply(result),
-            callbackService.registerNewCallback(scopeId, actor, target)
+            commandMessage
         );
     }
 
@@ -163,7 +168,7 @@ public class AbilityService {
             targetPlayerId, target.getSize(), null,
             Action.SLOW, logMetadata);
 
-        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.SLOW);
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.SLOW, targetPlayerId);
         PlayerStatus status = playerStatusService.applyStatus(actor, stat);
 
         playerDao.save(target);
@@ -263,7 +268,7 @@ public class AbilityService {
             targetPlayerId, oldTargetSize, target.getSize(),
             Action.TRANSFER, logMetadata);
 
-        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.TRANSFER);
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.TRANSFER, targetPlayerId);
         PlayerStatus status = playerStatusService.applyStatus(actor, stat);
 
         playerDao.save(target);
@@ -326,7 +331,7 @@ public class AbilityService {
             null, null, null,
             Action.JACKPOT, logMetadata);
 
-        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.JACKPOT);
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.JACKPOT, null);
         PlayerStatus status = playerStatusService.applyStatus(actor, stat);
 
         playerDao.save(actor);
@@ -359,7 +364,7 @@ public class AbilityService {
         double oldGrowthBonus = actor.getPendingGrowthModifier();
 
 
-        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.TURTLE);
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.TURTLE, null);
         PlayerStatus status = playerStatusService.applyStatus(actor, stat);
 
         double affectedGrowthModifier = playerStatusService.modifyGrowthModifier(actor, null, Action.TURTLE, increaseBonus);
@@ -422,7 +427,7 @@ public class AbilityService {
             null, null, null,
             Action.PRAY, logMetadata);
 
-        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.PRAY);
+        PlayerBehaviorStats stat = playerBehaviorStatService.applyAbility(playerId, Action.PRAY, null);
         PlayerStatus status = playerStatusService.applyStatus(actor, stat);
 
         playerDao.save(actor);

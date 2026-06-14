@@ -13,18 +13,15 @@ public class PlayerBehaviorStatService {
     private final PlayerBehaviorStatRepository repository;
 
     @Transactional
-    public PlayerBehaviorStats applyAbility(Long playerId, Action action) {
+    public PlayerBehaviorStats applyAbility(Long playerId, Action action, Long targetId) {
         PlayerBehaviorStats stat = repository.findByPlayerId(playerId).orElse(new PlayerBehaviorStats(playerId));
-        if (action == stat.getLastAbilityAction()) {
-            stat.incrementAbilityStreak();
-        } else {
-            stat.setLastAbilityAction(action);
-            stat.setSameAbilityStreak(1);
-        }
 
+        stat.applyAbility(action, targetId);
         repository.save(stat);
         return stat;
     }
+
+
 
     public void save(PlayerBehaviorStats stats) {
         repository.save(stats);

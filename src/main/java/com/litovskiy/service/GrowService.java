@@ -176,7 +176,7 @@ public class GrowService {
         double growthGauss = growthProperties.getGrowthGauss();
 
         double baseGrowth = growthMean + random.nextGaussian() * growthGauss;
-        baseGrowth = StringUtil.clamp(baseGrowth, minGrowth, maxGrowth);
+        baseGrowth = Math.clamp(baseGrowth, minGrowth, maxGrowth);
 
         double slowdown = 1.0 / (1.0 + currentSize / growthLimit);
         double modifier = 1.0 + (baseGrowth - 1.0) * slowdown * activityBonus;
