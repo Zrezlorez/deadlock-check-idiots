@@ -21,8 +21,6 @@ public class PlayerBehaviorStatService {
         return stat;
     }
 
-
-
     public void save(PlayerBehaviorStats stats) {
         repository.save(stats);
     }
