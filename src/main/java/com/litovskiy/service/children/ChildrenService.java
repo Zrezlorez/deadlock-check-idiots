@@ -100,23 +100,23 @@ public class ChildrenService {
 
         Optional<Children> childrenOptional = childrenRepository.findById(childrenId);
         if (childrenOptional.isEmpty()) {
-            return CareActionResult.error("Росток не найден.");
+            return CareActionResult.error("Ребенок не найден.");
         }
 
         Children children = childrenOptional.get();
         if (children.getScopeId() != scopeId || children.getStatus() != ChildrenStatus.ACTIVE) {
-            return CareActionResult.error("Росток уже неактивен.");
+            return CareActionResult.error("Ребенок уже неактивен.");
         }
 
         boolean firstParent = actor.getId().equals(children.getFirstPlayer());
         boolean secondParent = actor.getId().equals(children.getSecondPlayer());
         if (!firstParent && !secondParent) {
-            return CareActionResult.error("Ты не родитель этого ростка.");
+            return CareActionResult.error("Ты не родитель этого ребенка.");
         }
 
         ChildrenCare care = getOrCreateCare(children, careDate);
         if (care.isResolved()) {
-            return CareActionResult.error("Сегодня за ростком уже ухаживали.");
+            return CareActionResult.error("Сегодня за ребенком уже ухаживали.");
         }
 
         care.setMessageId(messageId);
