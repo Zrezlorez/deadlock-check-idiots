@@ -44,7 +44,7 @@ game:
   leaderboard-limit: 5
   log-page-size: 5
   ability:
-    ability-cooldown: 1s
+    ability-cooldown: 8h
     jackpot-fail-chance: 0.15
     jackpot-crit-chance: 0.4
     pray-fail-bonus: 0.1
@@ -70,7 +70,7 @@ game:
     growth-parent-buff: 0.15
     growth-parent-debuff: -0.15
   growth:
-    growth-cooldown: 1s
+    growth-cooldown: 8h
     start-size: 1
     growth-mean: 1.15
     growth-min: 1.1
