@@ -1,40 +1,41 @@
 package com.litovskiy.bot.tg;
 
-import com.litovskiy.util.CommandMessage;
-import com.litovskiy.util.MessageDelivery;
+import com.litovskiy.bot.CommandMessage;
+import com.litovskiy.bot.KeyboardSpec;
+import com.litovskiy.bot.MessageDelivery;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
 public class TgMessageSender {
-
-    public void sendMessage(
+    public Message sendMessage(
         TelegramClient telegramClient,
         long chatId,
         Integer messageThreadId,
         Integer replyToMessageId,
         CommandMessage message
     ) {
-        if (message == null || message.text() == null || message.text().isBlank()) {
-            return;
+        if (message == null || message.getText() == null || message.getText().isBlank()) {
+            return null;
         }
 
-        Integer actualReplyToMessageId = message.delivery() == MessageDelivery.REPLY
+        Integer actualReplyToMessageId = message.getDelivery() == MessageDelivery.REPLY
             ? replyToMessageId
             : null;
 
-        SendMessage.SendMessageBuilder builder = SendMessage.builder()
+        var builder = SendMessage.builder()
             .chatId(chatId)
-            .text(message.text());
+            .text(message.getText());
 
         if (messageThreadId != null) {
             builder.messageThreadId(messageThreadId);
@@ -44,41 +45,73 @@ public class TgMessageSender {
             builder.replyToMessageId(actualReplyToMessageId);
         }
 
-        if (message.html()) {
+        if (message.getHtml()) {
             builder.parseMode("HTML");
             builder.disableWebPagePreview(true);
         }
-        try {
-            Message sentMessage = telegramClient.execute(builder.build());
 
-            if (message.deleteAfterSend() && sentMessage != null) {
-                scheduleDelete(telegramClient, chatId, sentMessage.getMessageId());
-            }
+        InlineKeyboardMarkup keyboard = buildKeyboard(message.getKeyboard());
+        if (keyboard != null) {
+            builder.replyMarkup(keyboard);
+        }
+
+        try {
+            return telegramClient.execute(builder.build());
         } catch (TelegramApiException e) {
             log.warn("Failed to send Telegram message. chatId={}, replyTo={}", chatId, actualReplyToMessageId, e);
+            return null;
         }
     }
 
-    private void scheduleDelete(TelegramClient telegramClient, long chatId, Integer messageId) {
-        if (messageId == null) {
-            return;
-        }
-
-        CompletableFuture
-            .delayedExecutor(30, TimeUnit.SECONDS)
-            .execute(() -> deleteMessage(telegramClient, chatId, messageId));
-    }
-
-    private void deleteMessage(TelegramClient telegramClient, long chatId, Integer messageId) {
+    public void answerCallback(TelegramClient telegramClient, String callbackId, String text) {
         try {
-            DeleteMessage deleteMessage = DeleteMessage.builder()
-                .chatId(chatId)
-                .messageId(messageId)
-                .build();
+            var builder = AnswerCallbackQuery.builder()
+                .callbackQueryId(callbackId)
+                .showAlert(false);
 
-            telegramClient.execute(deleteMessage);
+            if (text != null && !text.isBlank()) {
+                builder.text(text);
+            }
+
+            telegramClient.execute(builder.build());
         } catch (TelegramApiException e) {
-            log.debug("Failed to delete Telegram message. chatId={}, messageId={}", chatId, messageId, e);
+            log.warn("Failed to answer callback. callbackId={}", callbackId, e);
         }
+    }
+
+    public void editMessage(
+        TelegramClient telegramClient,
+        long chatId,
+        long messageId,
+        String text,
+        KeyboardSpec keyboard
+    ) {
+        try {
+            telegramClient.execute(EditMessageText.builder()
+                .chatId(chatId)
+                .messageId(Math.toIntExact(messageId))
+                .text(text)
+                .replyMarkup(buildKeyboard(keyboard))
+                .build());
+        } catch (TelegramApiException e) {
+            log.warn("Failed to edit Telegram message. chatId={}, messageId={}", chatId, messageId, e);
+        }
+    }
+
+    private InlineKeyboardMarkup buildKeyboard(KeyboardSpec keyboard) {
+        if (keyboard == null || keyboard.rows() == null || keyboard.rows().isEmpty()) {
+            return null;
+        }
+
+        return InlineKeyboardMarkup.builder()
+            .keyboard(keyboard.rows().stream()
+                .map(row -> new InlineKeyboardRow(row.stream()
+                    .map(button -> InlineKeyboardButton.builder()
+                        .text(button.text())
+                        .callbackData(button.callbackData())
+                        .build())
+                    .toList()))
+                .toList())
+            .build();
     }
 }

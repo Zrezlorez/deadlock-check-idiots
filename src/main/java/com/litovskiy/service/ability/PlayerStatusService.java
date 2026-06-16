@@ -1,12 +1,12 @@
-package com.litovskiy.service;
+package com.litovskiy.service.ability;
 
+import com.litovskiy.config.properties.AbilityProperties;
 import com.litovskiy.entity.Player;
 import com.litovskiy.entity.PlayerBehaviorStats;
 import com.litovskiy.log.Action;
 import com.litovskiy.service.log.PlayerBehaviorStatService;
 import com.litovskiy.util.CommandBlockReason;
 import com.litovskiy.util.GrowthContext;
-import com.litovskiy.util.PlayerStatus;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +22,7 @@ public class PlayerStatusService {
 
     private final Clock clock;
     private final PlayerBehaviorStatService service;
+    private final AbilityProperties properties;
 
     public CommandBlockReason validateActionAllowed(Player player, Action action) {
         PlayerStatus status = getActiveStatus(player);
@@ -137,8 +138,8 @@ public class PlayerStatusService {
     public GrowthContext applyGrowthStatusEffects(Player player, GrowthContext context) {
         return switch (getActiveStatus(player)) {
             case LUDOMANIA -> context
-                .withFailChanceModifier(0.05)
-                .withCritChanceModifier(0.05)
+                .withFailChanceModifier(context.failChance() + 0.05)
+                .withCritChanceModifier(context.critChance() +0.05)
                 .withCritMultiplier(context.critMultiplier() + 42.25)
                 .withFailPercent(0.4);
             case SHAO_LIN -> context
@@ -206,6 +207,11 @@ public class PlayerStatusService {
 
         player.setStatus(status);
         player.setStatusUntil(now.plusHours(36));
+
+        if (status == PlayerStatus.LUDOMANIA) {
+            player.addPendingFailChanceModifier(properties.getJackpotFailChance() * -1);
+            player.addPendingCritChanceModifier(properties.getJackpotCritChance() * -1);
+        }
 
         return status;
     }

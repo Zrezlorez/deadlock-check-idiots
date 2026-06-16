@@ -60,6 +60,15 @@ game:
   activity:
     look-back-days: 7
     max-growth-bonus: 0.15
+  children:
+    max-health: 100
+    success-health-delta: 10
+    fail-health-delta: 10
+    single-success-chance: 0.55
+    both-success-chance: 0.7
+    same-action-success-chance: 0.9
+    growth-parent-buff: 0.15
+    growth-parent-debuff: -0.15
   growth:
     growth-cooldown: 8h
     start-size: 1

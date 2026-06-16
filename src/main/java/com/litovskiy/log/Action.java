@@ -1,6 +1,6 @@
 package com.litovskiy.log;
 
-import com.litovskiy.util.PlayerStatus;
+import com.litovskiy.service.ability.PlayerStatus;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 

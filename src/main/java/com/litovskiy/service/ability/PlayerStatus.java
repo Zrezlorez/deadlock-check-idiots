@@ -1,4 +1,4 @@
-package com.litovskiy.util;
+package com.litovskiy.service.ability;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

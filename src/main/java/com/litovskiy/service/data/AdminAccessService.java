@@ -1,4 +1,4 @@
-package com.litovskiy.service;
+package com.litovskiy.service.data;
 
 import com.litovskiy.config.properties.AdminProperties;
 import com.litovskiy.entity.Platform;

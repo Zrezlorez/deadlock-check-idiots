@@ -1,6 +1,6 @@
 package com.litovskiy.entity;
 
-import com.litovskiy.util.PlayerStatus;
+import com.litovskiy.service.ability.PlayerStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -81,5 +81,17 @@ public class Player {
         this.pendingFailChanceModifier = 0.0;
         this.pendingCritChanceModifier = 0.0;
         this.pendingGrowthModifier = 0.0;
+    }
+
+    public void addPendingGrowthModifier(double value) {
+        pendingGrowthModifier += value;
+    }
+
+    public void addPendingFailChanceModifier(double value) {
+        pendingFailChanceModifier += value;
+    }
+
+    public void addPendingCritChanceModifier(double value) {
+        pendingCritChanceModifier += value;
     }
 }

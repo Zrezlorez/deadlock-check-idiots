@@ -1,4 +1,4 @@
-package com.litovskiy.util;
+package com.litovskiy.bot;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -5,36 +5,43 @@ import com.litovskiy.entity.Platform;
 import com.litovskiy.service.ConversationParticipantService;
 import com.litovskiy.service.ConversationStyleService;
 import com.litovskiy.service.PlayerAccountService;
+import com.litovskiy.service.children.TelegramCallbackService;
+import com.litovskiy.service.children.ChildrenService;
 import com.litovskiy.service.activity.ActivityService;
-import com.litovskiy.util.CommandMessage;
-import com.litovskiy.util.CommandResult;
-import com.litovskiy.util.MessageDelivery;
+import com.litovskiy.bot.CommandMessage;
+import com.litovskiy.bot.CommandResult;
+import com.litovskiy.bot.MessageDelivery;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.GetMe;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
+import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 @Slf4j
 @Component
+@EnableScheduling
 @RequiredArgsConstructor
 public class TgBot implements LongPollingSingleThreadUpdateConsumer {
-
     private final TgResponseBuilder tgResponseBuilder;
     private final ActivityService activityService;
+    private final ChildrenService childrenService;
     private final ConversationStyleService conversationStyleService;
     private final PlayerAccountService playerAccountService;
     private final ConversationParticipantService conversationParticipantService;
-
+    private final TelegramCallbackService callbackService;
     private final TgMessageSender sender;
     private final OkHttpClient okHttpClient;
     private TelegramClient telegramClient;
@@ -64,40 +71,93 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     @Override
     public void consume(Update update) {
-        if (!update.hasMessage()) {
+        if (update.hasMessage()) {
+            consumeMessage(update);
+            return;
+        }
+        if (update.hasCallbackQuery()) {
+            consumeCallback(update);
+        }
+
+    }
+
+    @Scheduled(cron = "0 0 12 * * *", zone = "Europe/Moscow")
+    public void sendDailyChildrenCareMessages() {
+        if (telegramClient == null) {
             return;
         }
 
-        if (update.getMessage().getNewChatMembers() != null && !update.getMessage().getNewChatMembers().isEmpty()) {
-            handleBotAdded(update);
+        ChildrenService.DailyCareDispatch dispatch = childrenService.prepareDailyCareDispatch();
+
+        for (ChildrenService.CareMessageEdit edit : dispatch.edits()) {
+            sender.editMessage(telegramClient, edit.scopeId(), edit.messageId(), edit.text(), null);
         }
 
-        if (update.getMessage().getFrom() != null) {
-            playerAccountService.updateTelegramProfile(
-                update.getMessage().getFrom().getId(),
-                StringUtil.formatTelegramDisplayName(update.getMessage().getFrom()),
-                update.getMessage().getFrom().getUserName()
+        for (ChildrenService.DailyCareMessage message : dispatch.messages()) {
+            Message sentMessage = sender.sendMessage(
+                telegramClient,
+                message.scopeId(),
+                null,
+                null,
+                CommandMessage.broadcast(message.text(), message.keyboard())
             );
-            if (update.getMessage().getChatId() < 0) {
-                conversationParticipantService.registerParticipant(
-                    Platform.TELEGRAM,
-                    update.getMessage().getFrom().getId(),
-                    update.getMessage().getChatId()
-                );
+
+            if (sentMessage != null) {
+                childrenService.setCareMessageId(message.careId(), sentMessage.getMessageId());
             }
         }
+    }
 
-        if (!update.getMessage().hasText()) {
+    private void consumeCallback(Update update) {
+        CallbackQuery callback = update.getCallbackQuery();
+        String callData = callback.getData();
+        String callId = callback.getId();
+        long messageId = callback.getMessage().getMessageId();
+        long chatId = callback.getMessage().getChatId();
+        Long userId = callback.getFrom().getId();
+
+        var result = callbackService.handleCallback(chatId, messageId, userId, callData);
+
+        sender.answerCallback(telegramClient, callId, result.answerText());
+        if (result.editText() != null) {
+            sender.editMessage(
+                telegramClient,
+                chatId,
+                messageId,
+                result.editText(),
+                result.editKeyboard()
+            );
+        }
+
+    }
+
+    private void consumeMessage(Update update) {
+        Message message = update.getMessage();
+
+        if (hasNewChatMembers(message)) {
+            handleBotAdded(message);
+        }
+
+        User senderUser = message.getFrom();
+        if (senderUser == null) {
             return;
         }
 
-        String text = update.getMessage().getText().trim();
-        long chatId = update.getMessage().getChatId();
-        Integer messageThreadId = update.getMessage().getMessageThreadId();
-        Integer replyToMessageId = update.getMessage().getMessageId();
-        long profileId = update.getMessage().getFrom().getId();
+        updateTelegramProfile(senderUser);
+        registerGroupParticipantIfNeeded(senderUser, message);
+
+        if (!message.hasText()) {
+            return;
+        }
+
+        String text = message.getText().trim();
+        long chatId = message.getChatId();
+        long profileId = message.getFrom().getId();
+
+
         if (chatId < 0 && !text.startsWith("/")) {
             activityService.recordMessage(Platform.TELEGRAM, profileId, chatId);
+            return;
         }
 
         String[] commandParts = text.split("\\s+", 2);
@@ -114,37 +174,54 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
             profileId
         );
 
+        sendResponseMessages(response, chatId, message);
+    }
+
+    private void sendResponseMessages(CommandResult response, long chatId, Message sourceMessage) {
         if (response == null || response.messages().isEmpty()) {
             return;
         }
 
+        Integer messageThreadId = sourceMessage.getMessageThreadId();
+        Integer sourceMessageId = sourceMessage.getMessageId();
+
         for (CommandMessage message : response.messages()) {
-            Integer replyTo = message.delivery() == MessageDelivery.REPLY
-                ? replyToMessageId
+            Integer replyToMessageId = message.getDelivery() == MessageDelivery.REPLY
+                ? sourceMessageId
                 : null;
 
-            sender.sendMessage(telegramClient, chatId, messageThreadId, replyTo, message);
+            Message newMessage = sender.sendMessage(
+                telegramClient,
+                chatId,
+                messageThreadId,
+                replyToMessageId,
+                message
+            );
+
+            if (message.getRequest() != null && newMessage != null) {
+                callbackService.setMessageCallback(message.getRequest(), newMessage.getMessageId());
+            }
         }
     }
 
-    private void handleBotAdded(Update update) {
-        if (botUserId == null || update.getMessage().getFrom() == null) {
+    private void handleBotAdded(Message message) {
+        if (botUserId == null || message.getFrom() == null) {
             return;
         }
 
-        boolean botWasAdded = update.getMessage().getNewChatMembers().stream()
+        boolean botWasAdded = message.getNewChatMembers().stream()
             .map(User::getId)
             .anyMatch(id -> id.equals(botUserId));
 
         if (botWasAdded) {
             conversationStyleService.registerTelegramManager(
-                update.getMessage().getChatId(),
-                update.getMessage().getFrom().getId()
+                message.getChatId(),
+                message.getFrom().getId()
             );
         }
 
-        long chatId = update.getMessage().getChatId();
-        update.getMessage().getNewChatMembers().stream()
+        long chatId = message.getChatId();
+        message.getNewChatMembers().stream()
             .filter(member -> !member.getIsBot())
             .forEach(member -> {
                 playerAccountService.updateTelegramProfile(
@@ -172,5 +249,31 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
         }
 
         return null;
+    }
+
+    private void updateTelegramProfile(User user) {
+        playerAccountService.updateTelegramProfile(
+            user.getId(),
+            StringUtil.formatTelegramDisplayName(user),
+            user.getUserName()
+        );
+    }
+
+    private void registerGroupParticipantIfNeeded(User user, Message message) {
+        long chatId = message.getChatId();
+
+        if (chatId >= 0) {
+            return;
+        }
+
+        conversationParticipantService.registerParticipant(
+            Platform.TELEGRAM,
+            user.getId(),
+            chatId
+        );
+    }
+
+    private boolean hasNewChatMembers(Message message) {
+        return message.getNewChatMembers() != null && !message.getNewChatMembers().isEmpty();
     }
 }

@@ -4,7 +4,7 @@ import com.litovskiy.entity.Platform;
 import com.litovskiy.service.ConversationParticipantService;
 import com.litovskiy.service.PlayerAccountService;
 import com.litovskiy.service.activity.ActivityService;
-import com.litovskiy.util.CommandResult;
+import com.litovskiy.bot.CommandResult;
 import com.litovskiy.util.StringUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
