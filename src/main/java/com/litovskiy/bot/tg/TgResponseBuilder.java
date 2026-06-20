@@ -103,6 +103,11 @@ public class TgResponseBuilder {
             return CommandResult.single("Ответьте этой командой на сообщение цели.");
         }
 
+        if (target.getIsBot()) {
+            return CommandResult.single("Советую извиниться и больше не ошибаться.");
+        }
+
+
         playerAccountService.updateTelegramProfile(target.getId(), StringUtil.formatTelegramDisplayName(target), target.getUserName());
         return abilityService.fuck(Platform.TELEGRAM, profileId, chatId, target.getId());
     }
@@ -117,6 +122,10 @@ public class TgResponseBuilder {
             return CommandResult.single("Ответьте этой командой на сообщение цели.");
         }
 
+        if (target.getIsBot()) {
+            return CommandResult.single("Мне кажется ты что-то попутал.");
+        }
+
         playerAccountService.updateTelegramProfile(target.getId(), StringUtil.formatTelegramDisplayName(target), target.getUserName());
         return abilityService.slow(Platform.TELEGRAM, profileId, chatId, target.getId());
     }
@@ -129,6 +138,10 @@ public class TgResponseBuilder {
         User target = extractReplyTarget(update.getMessage());
         if (target == null) {
             return CommandResult.single("Ответьте этой командой на сообщение цели.");
+        }
+
+        if (target.getIsBot()) {
+            return CommandResult.single("Спасибо конечно, но мне ваши подачки не нужны.");
         }
 
         if (commandParts.length < 2) {
