@@ -81,7 +81,7 @@ public class TgBot implements LongPollingSingleThreadUpdateConsumer {
 
     }
 
-    @Scheduled(cron = "0 0 12 * * *", zone = "Europe/Moscow")
+    @Scheduled(cron = "0 * * * * *", zone = "Europe/Moscow")
     public void sendDailyChildrenCareMessages() {
         if (telegramClient == null) {
             return;

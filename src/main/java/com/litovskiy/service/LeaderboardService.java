@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Objects;
 
 import static com.litovskiy.entity.GrowthStyle.convertValue;
-import static com.litovskiy.util.StringUtil.escapeHtml;
+import static com.litovskiy.util.StringUtil.formatTelegramPlayer;
 
 @Service
 @RequiredArgsConstructor
@@ -94,21 +94,8 @@ public class LeaderboardService {
         }
 
         return switch (platform) {
-            case TELEGRAM -> formatTelegramPlayer(player, profileId, scopeId);
+            case TELEGRAM -> formatTelegramPlayer(player, scopeId);
             case DISCORD -> "<@" + profileId + ">";
         };
-    }
-
-    private String formatTelegramPlayer(Player player, long profileId, Long scopeId) {
-        String displayName = player.getTelegramDisplayName();
-        if (displayName == null || displayName.isBlank()) {
-            displayName = "id " + profileId;
-        }
-
-        if (scopeId != null) {
-            return displayName;
-        }
-
-        return "<a href=\"tg://user?id=" + profileId + "\">" + escapeHtml(displayName) + "</a>";
     }
 }

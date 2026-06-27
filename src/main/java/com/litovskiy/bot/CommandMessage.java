@@ -27,11 +27,11 @@ public class CommandMessage {
     }
 
     public static CommandMessage broadcast(String text, KeyboardSpec keyboard) {
-        return new CommandMessage(text, MessageDelivery.BROADCAST, false, keyboard, null);
+        return new CommandMessage(text, MessageDelivery.BROADCAST, true, keyboard, null);
     }
 
     public static CommandMessage broadcast(String text, KeyboardSpec keyboard, TelegramCallbackRequest request) {
-        return new CommandMessage(text, MessageDelivery.BROADCAST, false, keyboard, request);
+        return new CommandMessage(text, MessageDelivery.BROADCAST, true, keyboard, request);
     }
 
 }

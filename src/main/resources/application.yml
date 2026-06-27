@@ -64,11 +64,11 @@ game:
     max-health: 100
     success-health-delta: 10
     fail-health-delta: 10
-    single-success-chance: 0.55
-    both-success-chance: 0.7
-    same-action-success-chance: 0.9
-    growth-parent-buff: 0.15
-    growth-parent-debuff: -0.15
+    single-success-chance: 0.4
+    both-success-chance: 0.6
+    same-action-success-chance: 0.7
+    growth-parent-buff: 0.25
+    growth-parent-debuff: -0.25
   growth:
     growth-cooldown: 8h
     start-size: 1

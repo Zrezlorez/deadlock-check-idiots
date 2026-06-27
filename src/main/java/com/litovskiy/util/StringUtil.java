@@ -1,5 +1,6 @@
 package com.litovskiy.util;
 
+import com.litovskiy.entity.Player;
 import org.telegram.telegrambots.meta.api.objects.User;
 
 import java.math.BigDecimal;
@@ -65,6 +66,19 @@ public final class StringUtil {
             return "@" + username.trim();
         }
         return "Пользователь " + userId;
+    }
+
+    public static String formatTelegramPlayer(Player player, Long scopeId) {
+        String displayName = player.getTelegramDisplayName();
+        if (displayName == null || displayName.isBlank()) {
+            displayName = "id " + player.getTelegramChatId();
+        }
+
+        if (scopeId != null) {
+            return displayName;
+        }
+
+        return "<a href=\"tg://user?id=" + player.getTelegramChatId() + "\">" + escapeHtml(displayName) + "</a>";
     }
 
     public static String formatDiscordTag(net.dv8tion.jda.api.entities.User user) {

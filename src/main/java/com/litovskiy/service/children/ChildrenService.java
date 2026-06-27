@@ -9,6 +9,7 @@ import com.litovskiy.entity.Player;
 import com.litovskiy.repository.ChildrenCareRepository;
 import com.litovskiy.repository.ChildrenRepository;
 import com.litovskiy.service.data.PlayerService;
+import com.litovskiy.util.StringUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Component;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -142,7 +142,7 @@ public class ChildrenService {
         careRepository.save(care);
         childrenRepository.save(children);
 
-        String eventText = buildSelectionEventText(actor, action, resolved);
+        String eventText = "";
         if (resolved) {
             eventText += "\n\n" + buildResolvedEventText(care);
         }
@@ -259,67 +259,54 @@ public class ChildrenService {
         Player firstPlayer = playerService.findById(children.getFirstPlayer());
         Player secondPlayer = playerService.findById(children.getSecondPlayer());
 
-        firstPlayer.addPendingGrowthModifier(0.15);
-        secondPlayer.addPendingGrowthModifier(0.15);
+        firstPlayer.addPendingGrowthModifier(childrenProperties.getGrowthParentBuff());
+        secondPlayer.addPendingGrowthModifier(childrenProperties.getGrowthParentBuff());
     }
 
     private void giveParentsDebuff(Children children) {
         Player firstPlayer = playerService.findById(children.getFirstPlayer());
         Player secondPlayer = playerService.findById(children.getSecondPlayer());
 
-        firstPlayer.addPendingGrowthModifier(-0.15);
-        secondPlayer.addPendingGrowthModifier(-0.15);
+        firstPlayer.addPendingGrowthModifier(childrenProperties.getGrowthParentDebuff());
+        secondPlayer.addPendingGrowthModifier(childrenProperties.getGrowthParentDebuff());
     }
 
     private String buildCareText(Children children, ChildrenCare care, String eventText) {
-        String status = care.isResolved()
-            ? "Уход на сегодня завершён."
-            : "Выберите действие ухода на сегодня.";
         String eventBlock = eventText == null || eventText.isBlank()
             ? ""
-            : "\n\n" + eventText;
+            : "\n━━━━━━━━━━━━━\n" + eventText;
 
+        Player firstPlayer = playerService.findById(children.getFirstPlayer());
+        Player secondPlayer = playerService.findById(children.getSecondPlayer());
         return """
-            Ваш ребенок плачет! Каждому родителю нужно выбрать, что с ним делать.
+            %s, %s
+            
+            Ваш ребенок плачет!
 
-            Здоровье: %d/100
-            Серия ухода: %d
-            %s
+            ❤️ Здоровье - %d
+            🔥 Серия ухода - %d
 
-            Первый родитель: %s
-            Второй родитель: %s
+            👨 %s — %s
+            👩 %s — %s
+            
             %s
             """.formatted(
+            StringUtil.formatTelegramPlayer(firstPlayer, null),
+            StringUtil.formatTelegramPlayer(secondPlayer, null),
             children.getHealth(),
             children.getStreak(),
-            status,
+            firstPlayer.getTelegramDisplayName(),
             formatAction(care.getFirstParentAction()),
+            secondPlayer.getTelegramDisplayName(),
             formatAction(care.getSecondParentAction()),
             eventBlock
         ).trim();
     }
 
-    private String buildSelectionEventText(Player actor, ChildrenAction action, boolean resolved) {
-        return "Результат выбора: %s выбрал %s.%s".formatted(
-            actor.getTelegramDisplayName(),
-            formatAction(action),
-            resolved ? "" : " Ждём второго родителя."
-        );
-    }
-
     private String buildResolvedEventText(ChildrenCare care) {
-        String result = care.getSuccessful()
-            ? "Ребенок перестал плакать"
-            : "Ребенок продолжил кричать и наблевал вам на одежду";
-
-        return """
-            Итог вашего ухода: %s.
-            Выборы родителей: %s / %s.
-            """.formatted(
-            result,
-            formatAction(care.getFirstParentAction()),
-            formatAction(care.getSecondParentAction())
-        ).trim();
+        return care.getSuccessful()
+            ? "Ребенок перестал плакать. Вы получили +25% усиления следующего роста"
+            : "Ребенок продолжил кричать и наблевал вам на одежду. Родители получили -25% к следующему росту";
     }
 
     private String formatAction(ChildrenAction action) {

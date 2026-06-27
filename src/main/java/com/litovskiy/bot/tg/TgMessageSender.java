@@ -89,6 +89,8 @@ public class TgMessageSender {
         try {
             telegramClient.execute(EditMessageText.builder()
                 .chatId(chatId)
+                .parseMode("HTML")
+                .disableWebPagePreview(true)
                 .messageId(Math.toIntExact(messageId))
                 .text(text)
                 .replyMarkup(buildKeyboard(keyboard))
