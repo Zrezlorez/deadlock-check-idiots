@@ -111,7 +111,7 @@ public class AbilityService {
 
         CommandMessage commandMessage = CommandMessage.reply(null);
         if (stat.getSameAbilityAndTargetStreak() == 3) {
-            commandMessage = callbackService.registerNewCallback(scopeId, actor, target);
+            //commandMessage = callbackService.registerNewCallback(scopeId, actor, target);
         }
         String result = "Вы усилили шанс неудачи цели на " + toPercent(failBonus)
             + "% за " + GrowthStyle.convertValue(cost, growthStyle) + ". Следующая попытка роста у цели будет опаснее.";
